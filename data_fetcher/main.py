@@ -8,11 +8,14 @@ from loguru import logger
 dotenv.load_dotenv()
 
 dataset_dir = f"{os.path.dirname(os.path.dirname(os.path.realpath(__file__)))}/datasets"
-date_range = ("2025-09-01", "2025-10-03")
+date_range = ("2025-09-22", "2025-10-03")
 datasets = {
     "PACE_OCI_L4M_MOANA_NRT": f"{dataset_dir}/realtime_phytoplankton_populations",
-    "PACE_OCI_L3M_IOP_NRT": f"{dataset_dir}/realtime_inherent_optical_properties",
-    "PACE_OCI_L3B_CHL_NRT": f"{dataset_dir}/realtime_chlorophyll_concentration",
+    # "PACE_OCI_L3M_IOP_NRT": f"{dataset_dir}/realtime_inherent_optical_properties", could be useful but very large
+    "PACE_OCI_L3M_CHL_NRT": f"{dataset_dir}/realtime_chlorophyll_concentration",
+    "PACE_OCI_L3M_PAR_NRT": f"{dataset_dir}/realtime_photosynthetically_available_radiation",
+    "PACE_OCI_L3M_POC_NRT": f"{dataset_dir}/realtime_particulate_organic_carbon",
+    "MODISA_L3M-SST4_NRT": f"{dataset_dir}/realtime_sea_surface_temperature_day_night",
 }
 
 
