@@ -12,11 +12,12 @@ PackageExport[LoadNetCDFVariable]
 PackageExport[EarthDataApplyScale]
 PackageExport[NetCDFPalettePlot]
 PackageExport[NetCDFGeoImage]
-PackageExport[NetCDFGeoDensityPlot]
+PackageExport[NetCDFGeoPosition]
 PackageExport[NetCDFGeoBounds]
 PackageExport[ComputeNetCDFStats]
 PackageExport[EarthDataVariableInfo]
 PackageExport[EarthDataSelectVariables]
+PackageExport[EarthDataValueShiftVector]
 
 
 Scan[ClearAll, Names["EarthDataTools`*"]]
@@ -32,10 +33,11 @@ EarthDataApplyScale::usage = "EarthDataApplyScale[data, attrs] transforms data f
 NetCDFPalettePlot::usage = "NetCDFPalettePlot[file, var, opts] produces an ArrayPlot styled visualization using display_min / display_max or robust quantiles and optional log scaling.";
 NetCDFGeoImage::usage = "NetCDFGeoImage[file, var] attempts to wrap a variable image with geographic bounding box metadata from global attributes (geospatial_*). Returns an Association.";
 NetCDFGeoBounds::usage = "NetCDFGeoBounds[file, opts] returns geographic bounds using coordinate variables (/lat,/lon etc.) when present, else geospatial_* attribute fallback. Variable data are NOT loaded. Returns Association: Lat, Lon, LatVariable, LonVariable, FromCoordinates, LatVector, LonVector, SwappedOrientation (always False).";
-NetCDFGeoDensityPlot::usage = "NetCDFGeoDensityPlot[file, var, opts] produces a GeoDensityPlot strictly in point mode using /lat and /lon (or specified) coordinate variables. Options: LatVariable, LonVariable, MaxPoints, Return -> Plot|Association|Rules.";
+NetCDFGeoPosition::usage = "NetCDFGeoPosition[file, var, opts] produces a GeoPosition strictly in point mode using /lat and /lon (or specified) coordinate variables. Options: LatVariable, LonVariable, MaxPoints";
 ComputeNetCDFStats::usage = "ComputeNetCDFStats[file, var] returns basic statistics (Min, Max, Mean, StandardDeviation, ValidCount) after masking fill values.";
 EarthDataVariableInfo::usage = "EarthDataVariableInfo[file, opts] returns a Dataset summarizing variables (dimensions, ranges, units, scaling).";
 EarthDataSelectVariables::usage = "EarthDataSelectVariables[file, patt] selects variable names matching string/regex pattern patt.";
+EarthDataValueShiftVector::usage = "EarthDataValueShiftVector[GeoPosition[coords] -> {before, after}] or EarthDataValueShiftVector[GeoPosition[coords], before, after] returns a GeoGridVector giving gradient components {d/dLat, d/dLon} of (after - before) over a regular lat/lon grid. Options: DirectionMethod -> (Sobel|CentralDifference), Scale -> s (numeric) or Automatic (default shrinks median magnitude to 0.1).";
 
 
 withFileExists[file_, expr_] := If[! FileExistsQ[file], Message[withFileExists::nofile, file]; Throw[$Failed, $tag], expr]
@@ -80,6 +82,7 @@ LoadNetCDFVariable[file_ ? StringQ, var_ ? StringQ, opts : OptionsPattern[]] := 
     data = safeImport[file, {"NetCDF", "Data", var}];
     If[! NumericArrayQ[data], Return[$Failed]];
     data = Normal @ data;
+    data = ArrayReshape[data, DeleteElements[Dimensions[data], {1}]];
     attrs = GetNetCDFVariableAttributes[file, var];
     fill = Lookup[attrs, "_FillValue", None];
     (* No substitution of fill sentinel; raw values preserved *)
@@ -100,7 +103,6 @@ EarthDataApplyScale[data_ ? ArrayQ, attrs_Association, eps_ : 1.*^-12] := Module
     vmin = Lookup[attrs, "valid_min", dmin];
     vmax = Lookup[attrs, "valid_max", dmax];
     fill = Lookup[attrs, "_FillValue", None];
-    scaled = ArrayReshape[N[scaled], DeleteElements[Dimensions[scaled], {1}]];
     If[ NumberQ[vmin] && NumberQ[vmax] && vmin < vmax,
         scaled = Clip[N[scaled], {vmin, vmax}]
     ];
@@ -218,12 +220,10 @@ NetCDFGeoImage[file_ ? StringQ, var_ ? StringQ, opts : OptionsPattern[]] := Modu
     <|"Image" -> img, "BoundingBox" -> bbox, "ValueRange" -> chosenRange, "FillValue" -> fill, "LogScale" -> scaleMeta["LogScale"]|>
 ]
 
-(* ---- GeoDensityPlot ---- *)
-Options[NetCDFGeoDensityPlot] = Join[
-    Options[GeoDensityPlot],
+(* ---- GeoPosition ---- *)
+Options[NetCDFGeoPosition] =
     {"LatVariable" -> Automatic, "LonVariable" -> Automatic, "Subsample" -> 10}
-];
-NetCDFGeoDensityPlot[file_ ? StringQ, var_ ? StringQ, opts : OptionsPattern[]] := Module[
+NetCDFGeoPosition[file_ ? StringQ, var_ ? StringQ, opts : OptionsPattern[]] := Module[
     {raw, attrs, bounds, latVec, lonVec, subsample, dims},
     raw = LoadNetCDFVariable[file, var, "Return" -> "Data"];
     If[FailureQ[raw], Return[Failure["LoadFailed", <|"MessageTemplate" -> "Could not load variable `1` from file `2`.", "MessageParameters" -> {var, file}|>]]];
@@ -233,14 +233,12 @@ NetCDFGeoDensityPlot[file_ ? StringQ, var_ ? StringQ, opts : OptionsPattern[]] :
     If[!TrueQ[bounds["FromCoordinates"]], Return[Failure["NoCoordinates", <|"MessageTemplate" -> "No coordinate vectors available for point mode."|>]]];
     latVec = bounds["LatVector"]; lonVec = bounds["LonVector"]; 
     If[!(VectorQ[latVec, NumericQ] && VectorQ[lonVec, NumericQ]), Return[Failure["InvalidCoords", <|"MessageTemplate" -> "Coordinate vectors invalid."|>]]];
-    If[TrueQ[bounds["SwappedOrientation"]], raw = Transpose[raw]];
+    
     dims = Dimensions[raw];
-    If[dims =!= {Length[latVec], Length[lonVec]}, Return[Failure["DimMismatch", <|"MessageTemplate" -> "Data dimensions do not match coordinate vector lengths after orientation adjustment."|>]]];
+    If[dims === Reverse[bounds["Dimensions"]], dims = Reverse[dims]; raw = Transpose[raw]];
+    If[dims =!= bounds["Dimensions"], Return[Failure["DimMismatch", <|"MessageTemplate" -> "Data dimensions do not match coordinate vector lengths after orientation adjustment."|>]]];
     subsample = Replace[OptionValue["Subsample"], Except[_Integer ? Positive] -> 10];
-    GeoDensityPlot[
-        GeoPosition[Tuples[{latVec[[;; ;; subsample]], lonVec[[;; ;; subsample]]}]] -> Flatten[raw[[;; ;; subsample, ;; ;; subsample]]],
-        FilterRules[{opts}, Options[GeoDensityPlot]]
-    ]
+    GeoPosition[Tuples[{latVec[[;; ;; subsample]], lonVec[[;; ;; subsample]]}]] -> Flatten[raw[[;; ;; subsample, ;; ;; subsample]]]
 ]
 
 (* ---- Statistics ---- *)
@@ -294,3 +292,68 @@ EarthDataVariableInfo[file_ ? StringQ, opts : OptionsPattern[]] := Module[
 
 (* ---- Variable selection ---- *)
 EarthDataSelectVariables[file_ ? StringQ, patt_] := Select[ListNetCDFVariables[file], StringMatchQ[#, patt] &]
+
+(* ---- Value Shift Vector ---- *)
+Options[EarthDataValueShiftVector] = { "DirectionMethod" -> "Sobel", "Scale" -> Automatic }
+EarthDataValueShiftVector[(GeoPosition[coords_List] -> {before_List, after_List}), opts : OptionsPattern[]] := Module[{c = coords},
+    (* Normalize single coordinate pair into list of one *)
+    If[VectorQ[c, NumericQ] && Length[c] == 2, c = {c}];
+    EarthDataValueShiftVector[GeoPosition[c], before, after, opts]
+]
+EarthDataValueShiftVector[GeoPosition[coords_List], before_List, after_List, opts : OptionsPattern[]] := Module[
+    {normCoords = coords, n1, n2, n3, method, scaleOpt, deltas, uniqueLat, uniqueLon, latVals, lonVals, isGrid,
+     deltaArray, gx, gy, gradVectors, buildIndex, latSpacing, lonSpacing, mags, factor},
+    If[VectorQ[normCoords, NumericQ] && Length[normCoords] == 2, normCoords = {normCoords}];
+    n1 = Length[normCoords]; n2 = Length[before]; n3 = Length[after];
+    If[!(n1 == n2 == n3), Return[Failure["LengthMismatch", <|"MessageTemplate" -> "Coordinate and value vector lengths differ (coords=`1`, before=`2`, after=`3`).", "MessageParameters" -> {n1, n2, n3}|>]]];
+    If[!MatrixQ[normCoords, NumericQ] || !VectorQ[before, NumericQ] || !VectorQ[after, NumericQ],
+        Return[Failure["InvalidData", <|"MessageTemplate" -> "Inputs must be numeric (coordinate list(s) + numeric vectors)."|>]]
+    ];
+    method = OptionValue["DirectionMethod"]; scaleOpt = OptionValue["Scale"]; deltas = after - before;
+    (* Attempt grid inference *)
+    uniqueLat = Sort @ DeleteDuplicates[normCoords[[All, 1]]];
+    uniqueLon = Sort @ DeleteDuplicates[normCoords[[All, 2]]];
+    latVals = uniqueLat; lonVals = uniqueLon;
+    isGrid = Length[latVals] * Length[lonVals] === n1;
+    If[!isGrid, Return[Failure["NonGrid", <|"MessageTemplate" -> "Coordinates do not form a regular rectangular grid."|>]]];
+    buildIndex = AssociationThread[normCoords -> Range[n1]];
+    deltaArray = Table[
+        With[{idx = buildIndex[{latVals[[i]], lonVals[[j]]}]}, deltas[[idx]]],
+        {i, Length[latVals]}, {j, Length[lonVals]}
+    ];
+    latSpacing = If[Length[latVals] > 1, Mean[Differences[latVals]], 1.0];
+    lonSpacing = If[Length[lonVals] > 1, Mean[Differences[lonVals]], 1.0];
+    Which[
+        method === "Sobel",
+            gx = ListConvolve[(1/8) {{1,0,-1},{2,0,-2},{1,0,-1}}, deltaArray, 2, "Fixed"] / lonSpacing;
+            gy = ListConvolve[(1/8) {{1,2,1},{0,0,0},{-1,-2,-1}}, deltaArray, 2, "Fixed"] / latSpacing;
+        , method === "CentralDifference",
+            gx = Table[
+                With[{j1 = Max[j-1,1], j2 = Min[j+1, Length[lonVals]]}, (deltaArray[[i,j2]] - deltaArray[[i,j1]]) / (lonVals[[j2]] - lonVals[[j1]] + 10.^-12)],
+                {i, Length[latVals]}, {j, Length[lonVals]}
+            ];
+            gy = Table[
+                With[{i1 = Max[i-1,1], i2 = Min[i+1, Length[latVals]]}, (deltaArray[[i2,j]] - deltaArray[[i1,j]]) / (latVals[[i2]] - latVals[[i1]] + 10.^-12)],
+                {i, Length[latVals]}, {j, Length[lonVals]}
+            ];
+        , True,
+            Return[Failure["UnknownDirectionMethod", <|"MessageTemplate" -> "Unknown DirectionMethod `1`." , "MessageParameters" -> {method}|>]]
+    ];
+    gradVectors = Flatten[Table[ { gy[[i,j]], gx[[i,j]] }, {i, Length[latVals]}, {j, Length[lonVals]}], 1];
+    (* Apply scaling *)
+    Which[
+        scaleOpt === Automatic,
+            mags = Map[Norm, gradVectors];
+            factor = Quiet @ Check[Median[mags], 0.];
+            factor = If[factor > 0, 0.1/factor, 1.];
+            gradVectors = factor * gradVectors;,
+        NumericQ[scaleOpt],
+            gradVectors = scaleOpt * gradVectors;,
+        True, Null
+    ];
+    gridOrderAssoc = AssociationThread[Flatten[Table[{latVals[[i]], lonVals[[j]]}, {i, Length[latVals]}, {j, Length[lonVals]}],1] -> gradVectors];
+    gradVectors = gridOrderAssoc /@ normCoords;
+
+    GeoGridVector[GeoPosition[normCoords] -> gradVectors, "Mercator"]
+]
+EarthDataValueShiftVector[bad___] := Failure["InvalidCall", <|"MessageTemplate" -> "Usage: EarthDataValueShiftVector[GeoPosition[coords] -> {before, after}] or EarthDataValueShiftVector[GeoPosition[coords], before, after]."|>]
