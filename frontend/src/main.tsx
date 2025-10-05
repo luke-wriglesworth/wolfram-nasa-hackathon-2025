@@ -27,6 +27,12 @@ const router = createBrowserRouter([
 				),
 			},
 			{
+				path: "/wolfram-nasa-hackathon-2025/",
+				element: (
+					<Landing />
+				),
+			},
+			{
 				path: "*",
 				element: <NotFoundPage />,
 			},
