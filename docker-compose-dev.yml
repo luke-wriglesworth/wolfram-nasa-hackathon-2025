@@ -1,0 +1,26 @@
+services:
+  db:
+    image: postgres:17.1
+    environment:
+      POSTGRES_DB: sharks
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+    ports: 
+      - "15432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d sharks"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+  backend:
+    build:
+      context: .   # everything under apps/ is visible to the build
+      dockerfile: docker/backend.Dockerfile
+    environment:
+      DATABASE_URL: postgresql+psycopg2://app:app@db:5432/sharks
+    ports: ["8000:8000"]
+  frontend:
+    build:
+      context: .   # everything under apps/ is visible to the build
+      dockerfile: docker/frontend.Dockerfile
+    ports: ["5173:80"]
