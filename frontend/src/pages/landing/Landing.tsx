@@ -12,7 +12,7 @@ import {
 import "leaflet/dist/leaflet.css";
 import data from "./sample_geojson.json";
 import VelocityLayer from "./VelocityLayer";
-import velocitydata from "./samplevelocity.json"; // Example velocity data
+import velocitydata from "./ocean_velocity.json"; // Example velocity data
 
 /** Imperatively fly the map when target changes */
 function FlyTo({ target, zoom = 13 }) {
@@ -41,7 +41,9 @@ export default function Landing() {
 			// In real app, fetch from server:
 			// const res = await fetch('/velocity.json');
 			// const json = await res.json();
-			const json = velocitydata.data; // Using local import for demo
+
+			// velocitydata is an array, but leaflet-velocity needs it directly
+			const json = velocitydata;
 			setVelocity(json);
 		};
 		loadData();

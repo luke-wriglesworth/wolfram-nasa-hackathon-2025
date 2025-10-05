@@ -7,10 +7,12 @@ requires-python = ">=3.13"
 dependencies = [
     "cartopy>=0.25.0",
     "dask>=2025.9.1",
+    "eccodes>=2.44.0",
     "folium>=0.20.0",
     "geopandas>=1.1.1",
     "h5netcdf>=1.6.4",
     "ipykernel>=6.30.1",
+    "iris-grib>=0.21.0",
     "matplotlib>=3.10.6",
     "metpy>=1.7.1",
     "mplleaflet>=0.0.5",
@@ -20,5 +22,6 @@ dependencies = [
     "rioxarray>=0.19.0",
     "scikit-image>=0.25.2",
     "scipy>=1.16.2",
+    "scitools-iris>=3.13.1",
     "xarray>=2025.9.1",
 ]
