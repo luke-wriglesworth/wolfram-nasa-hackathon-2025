@@ -17,6 +17,7 @@ datasets = {
     "PACE_OCI_L3M_PAR_NRT": f"{dataset_dir}/realtime_photosynthetically_available_radiation",
     "PACE_OCI_L3M_POC_NRT": f"{dataset_dir}/realtime_particulate_organic_carbon",
     "MODISA_L3m_SST4_NRT": f"{dataset_dir}/realtime_sea_surface_temperature_day_night",
+    "OSCAR_L4_OC_NRT_V2.0": f"{dataset_dir}/realtime_surface_ocean_currents",
 }
 
 
