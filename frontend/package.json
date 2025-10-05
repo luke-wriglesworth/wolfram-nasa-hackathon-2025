@@ -3,7 +3,7 @@
 	"private": true,
 	"version": "0.1.0",
 	"type": "module",
-	"homepage": "https://luke-wriglesworth.github.io/sharks-from-space",
+	"homepage": "https://luke-wriglesworth.github.io/wolfram-nasa-hackathon-2025/",
 	"scripts": {
 		"dev": "vite",
 		"build": "vite build",
