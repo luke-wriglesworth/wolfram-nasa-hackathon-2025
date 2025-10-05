@@ -27,16 +27,14 @@ jobs:
         with:
           lfs: false
 
-      - name: Setup Node
+      - name: Setup Node.js
         uses: actions/setup-node@v4
-        working-directory: frontend
         with:
-          node-version: 20
-          cache: "npm"
+          node-version: '20'
 
       - name: Install deps
         working-directory: frontend
-        run: npm ci
+        run: npm install
 
       - name: Build (Vite, with correct base)
         working-directory: frontend
