@@ -100,16 +100,17 @@ EarthDataApplyScale[data_ ? ArrayQ, attrs_Association, eps_ : 1.*^-12] := Module
     vmin = Lookup[attrs, "valid_min", dmin];
     vmax = Lookup[attrs, "valid_max", dmax];
     fill = Lookup[attrs, "_FillValue", None];
+    scaled = ArrayReshape[N[scaled], DeleteElements[Dimensions[scaled], {1}]];
     If[ NumberQ[vmin] && NumberQ[vmax] && vmin < vmax,
         scaled = Clip[N[scaled], {vmin, vmax}]
     ];
-    If[ scaleKey === "log",
+    (* If[ scaleKey === "log",
         scaled = Log[Clip[scaled, {eps, Infinity}]];
         {fill, vmin, vmax, dmin, dmax} = Map[
             Log[If[NumberQ[#] && # > 0, #, eps]] &,
             {fill, vmin, vmax, dmin, dmax}
         ];
-    ];
+    ]; *)
     <|
         "Data" -> scaled,
         "LogScale" -> scaleKey === "log",
@@ -179,13 +180,18 @@ NetCDFGeoBounds[file_ ? StringQ, opts : OptionsPattern[]] := Module[
             Return[Failure["NoBounds", <|"MessageTemplate" -> "No coordinate vectors or geospatial_* attributes available."|>]]
         ]
     ];
-    <|"Lat" -> {latMin, latMax}, "Lon" -> {lonMin, lonMax}, "LatVariable" -> latVar, "LonVariable" -> lonVar,
-      "FromCoordinates" -> fromCoords, "SwappedOrientation" -> False,
-      "LatVector" -> If[fromCoords, latVec, Missing["NotAvailable"]],
-      "LonVector" -> If[fromCoords, lonVec, Missing["NotAvailable"]]|>
+    <|
+        "Lat" -> {latMin, latMax}, "Lon" -> {lonMin, lonMax}, "LatVariable" -> latVar, "LonVariable" -> lonVar,
+        "FromCoordinates" -> fromCoords, "SwappedOrientation" -> False,
+        "LatVector" -> If[fromCoords, latVec, Missing["NotAvailable"]],
+        "LonVector" -> If[fromCoords, lonVec, Missing["NotAvailable"]],
+        "Dimensions" -> If[fromCoords, {Length[latVec], Length[lonVec]}, Missing["NotAvailable"]]
+    |>
 ];
 
-NetCDFGeoImage[file_ ? StringQ, var_ ? StringQ] := Module[
+Options[NetCDFGeoImage] = Options[Colorize]
+
+NetCDFGeoImage[file_ ? StringQ, var_ ? StringQ, opts : OptionsPattern[]] := Module[
     {data, attrs, scaleMeta, scaled, fill, vmin, vmax, dmin, dmax, numericVals, chosenRange, rescaled, img, bounds, bbox},
     data = LoadNetCDFVariable[file, var];
     If[FailureQ[data], Return[Failure["LoadFailed", <|"MessageTemplate" -> "Could not load variable `1` from file `2`."|>, {var, file}]]];
@@ -200,9 +206,15 @@ NetCDFGeoImage[file_ ? StringQ, var_ ? StringQ] := Module[
         True, {Min[numericVals], Max[numericVals]}
     ];
     rescaled = Round @ Rescale[scaled, chosenRange, {0, 255}];
-    img = ColorReplace[Colorize[rescaled, ColorFunction -> "SolarColors"], Black -> Transparent];
     bounds = NetCDFGeoBounds[file];
     bbox = {bounds["Lat"], bounds["Lon"]};
+    If[ ! MissingQ[bounds["Dimensions"]] && Dimensions[rescaled] =!= bounds["Dimensions"],
+        rescaled = Transpose[rescaled]
+    ];
+    img = ColorReplace[
+        Colorize[rescaled, FilterRules[{opts}, Options[Colorize]], ColorFunction -> "SolarColors"],
+        Black -> Transparent
+    ];
     <|"Image" -> img, "BoundingBox" -> bbox, "ValueRange" -> chosenRange, "FillValue" -> fill, "LogScale" -> scaleMeta["LogScale"]|>
 ]
 
