@@ -1,0 +1,57 @@
+# Node.js / TypeScript
+node_modules/
+build/
+dist/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.env
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.db
+*.sqlite3
+*.egg-info/
+*.egg/
+*.coverage
+.coverage.*
+.cache/
+.mypy_cache/
+.pytest_cache/
+.env
+.venv/
+venv/
+ENV/
+env/
+Pipfile.lock
+
+# Common
+.DS_Store
+*.swp
+*.swo
+.idea/
+.vscode/
+*.bak
+*.tmp
+*.orig
+*.rej
+*.test
+*.spec
+*.out
+
+# Docker files
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Git
+.git/
+.gitignore
+

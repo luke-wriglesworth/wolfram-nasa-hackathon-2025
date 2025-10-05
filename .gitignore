@@ -1,0 +1,76 @@
+#testprod docker-compose
+docker-compose-testprod.yml
+
+# Node.js
+node_modules/
+.env
+.env.*
+!.env.production
+dist/
+build/
+.git/
+.gitignore
+
+# Vite
+.vite/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+# Editor
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*.swo
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.db
+*.sqlite3
+*.egg-info/
+
+# Docker
+*.pid
+*.seed
+*.pid.lock
+
+# OS
+Thumbs.db
+Desktop.ini
+
+# SQLite DB
+backend/dev.db
+
+#ruff
+.ruff_cache/
+
+# Misc
+coverage/
+*.tgz
+
+# Ignore local lock files
+frontend/package-lock.json
+frontend/pnpm-lock.yaml
+frontend/yarn.lock
+!backend/uv.lock
+
+# Ignore build output
+frontend/.next/
+frontend/out/
+
+# Ignore compiled files
+*.tsbuildinfo
+
+# Ignore Tailwind JIT cache
+.tailwind/
+
+
+# python
+.venv/
