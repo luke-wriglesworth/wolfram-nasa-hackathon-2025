@@ -6,7 +6,7 @@
 	"homepage": "https://luke-wriglesworth.github.io/wolfram-nasa-hackathon-2025/",
 	"scripts": {
 		"dev": "vite",
-		"build": "vite build",
+		"build": "vite build --base=/wolfram-nasa-hackathon-2025/",
 		"preview": "vite preview --port 5173",
 		"dev:broadcast": "vite --host 0.0.0.0",
 		"prod": "vite build",
