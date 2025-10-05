@@ -32,6 +32,7 @@ export default function Landing() {
 	const [target, setTarget] = useState(null);
 	const [velocity, setVelocity] = useState(null);       // loaded velocity data
 	const [showVelocity, setShowVelocity] = useState(true); // toggle state
+	const [showVorticity, setShowVorticity] = useState(false); // vorticity toggle
 	const markerRef = useRef(null);
 
 	// Load velocity data from /public/velocity.json (GRIB-like U/V format)
@@ -123,12 +124,30 @@ export default function Landing() {
 							aria-label="Toggle velocity layer"
 							disabled={!velocityReady}
 							className={`relative inline-flex h-6 w-11 items-center rounded-full transition
-                ${showVelocity ? "bg-blue-600" : "bg-gray-500"} 
+                ${showVelocity ? "bg-blue-600" : "bg-gray-500"}
                 ${velocityReady ? "cursor-pointer" : "cursor-not-allowed"}`}
 						>
 							<span
 								className={`inline-block h-5 w-5 transform rounded-full bg-white transition
                   ${showVelocity ? "translate-x-6" : "translate-x-1"}`}
+							/>
+						</button>
+					</label>
+
+					{/* Vorticity Toggle */}
+					<label className="flex items-center gap-2">
+						<span className="text-sm">Vorticity</span>
+						<button
+							type="button"
+							onClick={() => setShowVorticity((s) => !s)}
+							aria-pressed={showVorticity}
+							aria-label="Toggle vorticity layer"
+							className={`relative inline-flex h-6 w-11 items-center rounded-full transition cursor-pointer
+                ${showVorticity ? "bg-purple-600" : "bg-gray-500"}`}
+						>
+							<span
+								className={`inline-block h-5 w-5 transform rounded-full bg-white transition
+                  ${showVorticity ? "translate-x-6" : "translate-x-1"}`}
 							/>
 						</button>
 					</label>
