@@ -29,21 +29,26 @@ jobs:
 
       - name: Setup Node
         uses: actions/setup-node@v4
+        working-directory: frontend
         with:
           node-version: 20
           cache: "npm"
 
       - name: Install deps
+        working-directory: frontend
         run: npm ci
 
       - name: Build (Vite, with correct base)
+        working-directory: frontend
         run: npm run build
 
       - name: SPA fallback (404 -> index)
+        working-directory: frontend
         run: cp build/index.html build/404.html
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
+        working-directory: frontend
         with:
           path: build
 
@@ -57,3 +62,6 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+    with:
+      branch: gh-pages
+      folder: frontend/build
