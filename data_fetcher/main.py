@@ -2,6 +2,7 @@ import os
 
 import dotenv
 import earthaccess
+import subprocess
 from loguru import logger
 
 # need an earthdata account and set EARTHDATA_TOKEN in .env
@@ -15,7 +16,7 @@ datasets = {
     "PACE_OCI_L3M_CHL_NRT": f"{dataset_dir}/realtime_chlorophyll_concentration",
     "PACE_OCI_L3M_PAR_NRT": f"{dataset_dir}/realtime_photosynthetically_available_radiation",
     "PACE_OCI_L3M_POC_NRT": f"{dataset_dir}/realtime_particulate_organic_carbon",
-    "MODISA_L3M-SST4_NRT": f"{dataset_dir}/realtime_sea_surface_temperature_day_night",
+    "MODISA_L3m_SST4_NRT": f"{dataset_dir}/realtime_sea_surface_temperature_day_night",
 }
 
 
@@ -36,7 +37,5 @@ def main():
         logger.info(f"Found {len(collection)} files for dataset {name}")
         logger.info(f"Downloading dataset: {name}")
         earthaccess.download(collection, local_path=download_dir, show_progress=True)
-
-
 if __name__ == "__main__":
     main()
