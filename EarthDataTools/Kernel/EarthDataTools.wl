@@ -13,6 +13,7 @@ PackageExport[EarthDataApplyScale]
 PackageExport[NetCDFPalettePlot]
 PackageExport[NetCDFGeoImage]
 PackageExport[NetCDFGeoDensityPlot]
+PackageExport[NetCDFGeoBounds]
 PackageExport[ComputeNetCDFStats]
 PackageExport[EarthDataVariableInfo]
 PackageExport[EarthDataSelectVariables]
@@ -30,6 +31,7 @@ LoadNetCDFVariable::usage = "LoadNetCDFVariable[file, var, opts] loads a variabl
 EarthDataApplyScale::usage = "EarthDataApplyScale[data, attrs] transforms data for visualization per attribute hints (e.g. log scaling) without altering the original numeric meaning.";
 NetCDFPalettePlot::usage = "NetCDFPalettePlot[file, var, opts] produces an ArrayPlot styled visualization using display_min / display_max or robust quantiles and optional log scaling.";
 NetCDFGeoImage::usage = "NetCDFGeoImage[file, var] attempts to wrap a variable image with geographic bounding box metadata from global attributes (geospatial_*). Returns an Association.";
+NetCDFGeoBounds::usage = "NetCDFGeoBounds[file, opts] returns geographic bounds using coordinate variables (/lat,/lon etc.) when present, else geospatial_* attribute fallback. Variable data are NOT loaded. Returns Association: Lat, Lon, LatVariable, LonVariable, FromCoordinates, LatVector, LonVector, SwappedOrientation (always False).";
 NetCDFGeoDensityPlot::usage = "NetCDFGeoDensityPlot[file, var, opts] produces a GeoDensityPlot strictly in point mode using /lat and /lon (or specified) coordinate variables. Options: LatVariable, LonVariable, MaxPoints, Return -> Plot|Association|Rules.";
 ComputeNetCDFStats::usage = "ComputeNetCDFStats[file, var] returns basic statistics (Min, Max, Mean, StandardDeviation, ValidCount) after masking fill values.";
 EarthDataVariableInfo::usage = "EarthDataVariableInfo[file, opts] returns a Dataset summarizing variables (dimensions, ranges, units, scaling).";
@@ -90,30 +92,42 @@ LoadNetCDFVariable[file_ ? StringQ, var_ ? StringQ, opts : OptionsPattern[]] := 
 ]
 
 (* ---- Scaling Helper ---- *)
-EarthDataApplyScale[data_ ? ArrayQ, attrs_Association] := Module[
-    {scaleType, dmin, dmax, scaled = data, fill},
-    scaleType = ToLowerCase @ ToString @ Lookup[attrs, "display_scale_type", Lookup[attrs, "scale_type", ""]];
-    dmin = Lookup[attrs, "display_min", None];
-    dmax = Lookup[attrs, "display_max", None];
+EarthDataApplyScale[data_ ? ArrayQ, attrs_Association, eps_ : 1.*^-12] := Module[
+    {scaleKey, dmin, dmax, vmin, vmax, scaled = data, fill},
+    scaleKey = Lookup[attrs, "display_scale"];
+    dmin = Lookup[attrs, "display_min", Missing["NotAvailable"]];
+    dmax = Lookup[attrs, "display_max", Missing["NotAvailable"]];
+    vmin = Lookup[attrs, "valid_min", dmin];
+    vmax = Lookup[attrs, "valid_max", dmax];
     fill = Lookup[attrs, "_FillValue", None];
-    Which[
-        StringStartsQ[scaleType, "log"],
-            scaled = Map[
-                If[NumberQ[fill] && # === fill, fill, Log10 @ Clip[#, {10.^-12, Infinity}]] &,
-                scaled,
-                {Depth[scaled] - 1}
-            ],
-        True, Null
+    If[ NumberQ[vmin] && NumberQ[vmax] && vmin < vmax,
+        scaled = Clip[N[scaled], {vmin, vmax}]
     ];
-    <|"Data" -> scaled, "DisplayMin" -> dmin, "DisplayMax" -> dmax, "LogScale" -> StringStartsQ[scaleType, "log"], "FillValue" -> fill|>
+    If[ scaleKey === "log",
+        scaled = Log[Clip[scaled, {eps, Infinity}]];
+        {fill, vmin, vmax, dmin, dmax} = Map[
+            Log[If[NumberQ[#] && # > 0, #, eps]] &,
+            {fill, vmin, vmax, dmin, dmax}
+        ];
+    ];
+    <|
+        "Data" -> scaled,
+        "LogScale" -> scaleKey === "log",
+        "DisplayMin" -> dmin, "DisplayMax" -> dmax,
+        "ValidMin" -> vmin, "ValidMax" -> vmax,
+        "FillValue" -> fill
+    |>
 ]
 
 (* ---- Palette Plot ---- *)
-Options[NetCDFPalettePlot] = {ColorFunction -> "SolarColors", "LogScale" -> Automatic, "UseDisplayRange" -> True, PlotLegends -> Automatic, "DataRange" -> Automatic}
+Options[NetCDFPalettePlot] = Join[
+    Options[ArrayPlot],
+    {"LogScale" -> Automatic, "UseDisplayRange" -> True}
+]
 NetCDFPalettePlot[file_ ? StringQ, var_ ? StringQ, opts : OptionsPattern[]] := Module[
-    {raw, attrs, meta, logQ, range, useDisp = TrueQ @ OptionValue["UseDisplayRange"], cf = OptionValue[ColorFunction], legend = OptionValue[PlotLegends], dataRangeOpt = OptionValue["DataRange"], fill, flatValid},
-    raw = LoadNetCDFVariable[file, var, "Return" -> "Data"];
-    If[raw === $Failed, Return[$Failed]];
+    {raw, attrs, meta, logQ, range, useDisp = TrueQ @ OptionValue["UseDisplayRange"], dataRangeOpt = OptionValue["DataRange"], fill, flatValid},
+    raw = LoadNetCDFVariable[file, var];
+    If[FailureQ[raw], Return[Failure["LoadFailed", <|"MessageTemplate" -> "Could not load variable `1` from file `2`.", "MessageParameters" -> {var, file}|>]]];
     attrs = GetNetCDFVariableAttributes[file, var];
     fill = Lookup[attrs, "_FillValue", None];
     meta = EarthDataApplyScale[raw, attrs];
@@ -126,85 +140,94 @@ NetCDFPalettePlot[file_ ? StringQ, var_ ? StringQ, opts : OptionsPattern[]] := M
         Length[flatValid] > 10, Quiet @ Check[Quantile[flatValid, {0.02, 0.98}], {Min[flatValid], Max[flatValid]}],
         True, {Min[flatValid], Max[flatValid]}
     ];
-    ArrayPlot[If[logQ, meta["Data"], raw], ColorFunction -> cf, PlotRange -> range, ColorFunctionScaling -> True,
-        PlotLegends -> legend /. Automatic :> (If[legend === Automatic, BarLegend[{cf, range}, LabelStyle -> Directive[FontSize -> 10]], None])]
+    ArrayPlot[
+        If[logQ, meta["Data"], raw]
+        ,
+        FilterRules[{opts}, Options[ArrayPlot]],
+        PlotRange -> range,
+        Frame -> None,
+        ColorRules -> {fill -> None},
+        ColorFunctionScaling -> True,
+        ColorFunction -> "SolarColors"
+    ]
 ]
 
 (* ---- Geo Image (bounding box) ---- *)
-NetCDFGeoImage[file_ ? StringQ, var_ ? StringQ] := Module[
-    {gattrs, raw, latMin, latMax, lonMin, lonMax, img, bbox},
-    gattrs = GetNetCDFGlobalAttributes[file];
-    raw = LoadNetCDFVariable[file, var, "Return" -> "Data"];
-    If[raw === $Failed, Return[$Failed]];
-    {latMin, latMax} = Lookup[gattrs, {"geospatial_lat_min", "geospatial_lat_max"}, {None, None}];
-    {lonMin, lonMax} = Lookup[gattrs, {"geospatial_lon_min", "geospatial_lon_max"}, {None, None}];
-    img = NetCDFPalettePlot[file, var, PlotLegends -> None];
-    bbox = {{latMin, lonMin}, {latMax, lonMax}};
-    <|"Image" -> img, "BoundingBox" -> bbox, "HasGeoBounds" -> AllTrue[Flatten[bbox], NumberQ]|>
-]
-
-(* ---- GeoDensityPlot ---- *)
-Options[NetCDFGeoDensityPlot] = Join[
-    Options[GeoDensityPlot],
-    {
-        PlotLegends -> Automatic, "Return" -> "Plot", 
-        "LatVariable" -> Automatic, "LonVariable" -> Automatic, "MaxPoints" -> Infinity
-    }
-]
-NetCDFGeoDensityPlot[file_ ? StringQ, var_ ? StringQ, opts : OptionsPattern[]] := Module[
-    {raw, attrs, fill, latVarOpt, lonVarOpt, latVar, lonVar, latCand, lonCand, latVec, lonVec, dims, nLat, nLon, maxPoints, total,
-    strideLat, strideLon, latIdx, lonIdx, sampled = False, rules, ret},
-    raw = LoadNetCDFVariable[file, var, "Return" -> "Data"];
-    If[raw === $Failed, Return[$Failed]];
-    attrs = GetNetCDFVariableAttributes[file, var];
-    fill = Lookup[attrs, "_FillValue", None];
-    (* Coordinate variable resolution *)
+Options[NetCDFGeoBounds] = {"LatVariable" -> Automatic, "LonVariable" -> Automatic, "FallBackToAttributes" -> True};
+NetCDFGeoBounds[file_ ? StringQ, opts : OptionsPattern[]] := Module[
+    {latVarOpt, lonVarOpt, latCand, lonCand, latVar, lonVar, latVec, lonVec, latMin, latMax, lonMin, lonMax, gattrs, fromCoords = False},
     latVarOpt = OptionValue["LatVariable"]; lonVarOpt = OptionValue["LonVariable"];
     latCand = If[latVarOpt === Automatic, {"/lat", "lat", "latitude", "LAT", "LATITUDE"}, {latVarOpt}];
     lonCand = If[lonVarOpt === Automatic, {"/lon", "lon", "longitude", "LON", "LONGITUDE"}, {lonVarOpt}];
     latVar = SelectFirst[latCand, NumericArrayQ @ safeImport[file, {"NetCDF", "Data", #}] &, None];
     lonVar = SelectFirst[lonCand, NumericArrayQ @ safeImport[file, {"NetCDF", "Data", #}] &, None];
-    If[latVar === None || lonVar === None, Return[$Failed]];
-    latVec = Normal @ safeImport[file, {"NetCDF", "Data", latVar}];
-    lonVec = Normal @ safeImport[file, {"NetCDF", "Data", lonVar}];
-    If[!(VectorQ[latVec, NumericQ] && VectorQ[lonVec, NumericQ]), Return[$Failed]];
-    dims = Dimensions[raw];
-    Which[
-        dims === {Length[latVec], Length[lonVec]}, Null,
-        dims === {Length[lonVec], Length[latVec]}, raw = Transpose[raw]; {latVec, lonVec} = {lonVec, latVec},
-        True, Null
+    gattrs = GetNetCDFGlobalAttributes[file];
+    If[latVar =!= None && lonVar =!= None,
+        latVec = Normal @ safeImport[file, {"NetCDF", "Data", latVar}];
+        lonVec = Normal @ safeImport[file, {"NetCDF", "Data", lonVar}];
+        If[VectorQ[latVec, NumericQ] && VectorQ[lonVec, NumericQ],
+            fromCoords = True;
+            latMin = Min[latVec]; latMax = Max[latVec];
+            lonMin = Min[lonVec]; lonMax = Max[lonVec];,
+            latVar = None; lonVar = None
+        ];
     ];
-    {nLat, nLon} = Dimensions[raw];
-    maxPoints = OptionValue["MaxPoints"];
-    total = nLat * nLon;
-    If[ IntegerQ[maxPoints] && maxPoints > 0 && total > maxPoints,
-        strideLat = Ceiling[nLat / Sqrt[maxPoints]];
-        strideLon = Ceiling[nLon / Sqrt[maxPoints]];
-        latIdx = Range[1, nLat, strideLat];
-        lonIdx = Range[1, nLon, strideLon];
-        sampled = True,
-        latIdx = Range[nLat]; lonIdx = Range[nLon]
-    ];
-
-    rules = GeoPosition[Tuples[{latVec, lonVec}]] -> Flatten[raw];
-    ret = OptionValue["Return"];
-
-    Which[
-        ret === "Rules", rules,
-        ret === "Association", <|
-            "Rules" -> rules,
-            "Bounds" -> <|"Lat" -> {Min[latVec], Max[latVec]}, "Lon" -> {Min[lonVec], Max[lonVec]}|>,
-            "LatVariable" -> latVar,
-            "LonVariable" -> lonVar,
-            "Sampled" -> sampled,
-            "PointCount" -> Length[rules],
-            "FillValue" -> fill,
-            "VariableAttributes" -> attrs
-        |>,
-        True, GeoDensityPlot[
-            rules,
-            FilterRules[{opts}, Options[GeoDensityPlot]]
+    If[! TrueQ[fromCoords],
+        If[TrueQ[OptionValue["FallBackToAttributes"]],
+            {latMin, latMax} = Lookup[gattrs, {"geospatial_lat_min", "geospatial_lat_max"}, {None, None}];
+            {lonMin, lonMax} = Lookup[gattrs, {"geospatial_lon_min", "geospatial_lon_max"}, {None, None}];,
+            Return[Failure["NoBounds", <|"MessageTemplate" -> "No coordinate vectors or geospatial_* attributes available."|>]]
         ]
+    ];
+    <|"Lat" -> {latMin, latMax}, "Lon" -> {lonMin, lonMax}, "LatVariable" -> latVar, "LonVariable" -> lonVar,
+      "FromCoordinates" -> fromCoords, "SwappedOrientation" -> False,
+      "LatVector" -> If[fromCoords, latVec, Missing["NotAvailable"]],
+      "LonVector" -> If[fromCoords, lonVec, Missing["NotAvailable"]]|>
+];
+
+NetCDFGeoImage[file_ ? StringQ, var_ ? StringQ] := Module[
+    {data, attrs, scaleMeta, scaled, fill, vmin, vmax, dmin, dmax, numericVals, chosenRange, rescaled, img, bounds, bbox},
+    data = LoadNetCDFVariable[file, var];
+    If[FailureQ[data], Return[Failure["LoadFailed", <|"MessageTemplate" -> "Could not load variable `1` from file `2`."|>, {var, file}]]];
+    attrs = GetNetCDFVariableAttributes[file, var];
+    scaleMeta = EarthDataApplyScale[data, attrs];
+    scaled = scaleMeta["Data"]; fill = scaleMeta["FillValue"]; vmin = scaleMeta["ValidMin"]; vmax = scaleMeta["ValidMax"]; dmin = scaleMeta["DisplayMin"]; dmax = scaleMeta["DisplayMax"]; 
+    numericVals = Select[Flatten @ scaled, NumericQ[#] && (!NumberQ[fill] || # =!= fill) &];
+    chosenRange = Which[
+        AllTrue[{vmin, vmax}, NumberQ], {vmin, vmax},
+        AllTrue[{dmin, dmax}, NumberQ], {dmin, dmax},
+        Length[numericVals] > 10, Quiet @ Check[Quantile[numericVals, {0.02, 0.98}], {Min[numericVals], Max[numericVals]}],
+        True, {Min[numericVals], Max[numericVals]}
+    ];
+    rescaled = Round @ Rescale[scaled, chosenRange, {0, 255}];
+    img = ColorReplace[Colorize[rescaled, ColorFunction -> "SolarColors"], Black -> Transparent];
+    bounds = NetCDFGeoBounds[file];
+    bbox = {bounds["Lat"], bounds["Lon"]};
+    <|"Image" -> img, "BoundingBox" -> bbox, "ValueRange" -> chosenRange, "FillValue" -> fill, "LogScale" -> scaleMeta["LogScale"]|>
+]
+
+(* ---- GeoDensityPlot ---- *)
+Options[NetCDFGeoDensityPlot] = Join[
+    Options[GeoDensityPlot],
+    {"LatVariable" -> Automatic, "LonVariable" -> Automatic, "Subsample" -> 10}
+];
+NetCDFGeoDensityPlot[file_ ? StringQ, var_ ? StringQ, opts : OptionsPattern[]] := Module[
+    {raw, attrs, bounds, latVec, lonVec, subsample, dims},
+    raw = LoadNetCDFVariable[file, var, "Return" -> "Data"];
+    If[FailureQ[raw], Return[Failure["LoadFailed", <|"MessageTemplate" -> "Could not load variable `1` from file `2`.", "MessageParameters" -> {var, file}|>]]];
+    attrs = GetNetCDFVariableAttributes[file, var];
+    bounds = NetCDFGeoBounds[file, "LatVariable" -> OptionValue["LatVariable"], "LonVariable" -> OptionValue["LonVariable"]];
+    If[FailureQ[bounds], Return[bounds]];
+    If[!TrueQ[bounds["FromCoordinates"]], Return[Failure["NoCoordinates", <|"MessageTemplate" -> "No coordinate vectors available for point mode."|>]]];
+    latVec = bounds["LatVector"]; lonVec = bounds["LonVector"]; 
+    If[!(VectorQ[latVec, NumericQ] && VectorQ[lonVec, NumericQ]), Return[Failure["InvalidCoords", <|"MessageTemplate" -> "Coordinate vectors invalid."|>]]];
+    If[TrueQ[bounds["SwappedOrientation"]], raw = Transpose[raw]];
+    dims = Dimensions[raw];
+    If[dims =!= {Length[latVec], Length[lonVec]}, Return[Failure["DimMismatch", <|"MessageTemplate" -> "Data dimensions do not match coordinate vector lengths after orientation adjustment."|>]]];
+    subsample = Replace[OptionValue["Subsample"], Except[_Integer ? Positive] -> 10];
+    GeoDensityPlot[
+        GeoPosition[Tuples[{latVec[[;; ;; subsample]], lonVec[[;; ;; subsample]]}]] -> Flatten[raw[[;; ;; subsample, ;; ;; subsample]]],
+        FilterRules[{opts}, Options[GeoDensityPlot]]
     ]
 ]
 
