@@ -12,7 +12,9 @@ import {
 import "leaflet/dist/leaflet.css";
 import data from "./sample_geojson.json";
 import VelocityLayer from "./VelocityLayer";
+import HeatmapLayerConnectedComponents from "./HeatmapLayerConnectedComponents";
 import velocitydata from "./ocean_velocity.json"; // Example velocity data
+import vorticitydata from "./vorticity_data.json"; // Vorticity heatmap data
 
 /** Imperatively fly the map when target changes */
 function FlyTo({ target, zoom = 13 }) {
@@ -214,6 +216,13 @@ export default function Landing() {
 
 				{/* Velocity overlay (respect toggle; only renders after data loads) */}
 				{velocityReady && showVelocity && <VelocityLayer data={velocity} />}
+
+				{/* Vorticity heatmap overlay */}
+				{showVorticity && (
+					<HeatmapLayerConnectedComponents
+						data={vorticitydata}
+					/>
+				)}
 
 				{/* Fly & Mark target */}
 				<FlyTo target={target} zoom={13} />
