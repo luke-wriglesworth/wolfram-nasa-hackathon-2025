@@ -47,8 +47,8 @@ jobs:
         run: cp build/index.html build/404.html
 
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
         working-directory: frontend
+        uses: actions/upload-pages-artifact@v3
         with:
           path: build
 
