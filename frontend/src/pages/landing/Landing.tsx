@@ -7,6 +7,7 @@ import {
 	Marker,
 	Popup,
 	useMap,
+	Pane
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import data from "./sample_geojson.json";
@@ -86,6 +87,21 @@ export default function Landing() {
 
 	const velocityReady = Boolean(velocity);
 
+	const mapRef = useRef(null);
+
+	useEffect(() => {
+		const map = mapRef.current;
+		if (!map) return;
+
+		// Create a top pane for labels
+		map.createPane("labels");
+		const pane = map.getPane("labels");
+		if (pane) {
+			pane.style.zIndex = 650;
+			pane.style.pointerEvents = "none";
+		}
+	}, []);
+
 	return (
 		<div className="flex flex-col h-screen">
 			{/* Navbar */}
@@ -148,7 +164,8 @@ export default function Landing() {
 
 			{/* Map */}
 			<MapContainer
-				center={[10, 0]}  // center roughly over the Atlantic
+				ref={mapRef}
+				center={[10, 0]}
 				zoom={4}
 				scrollWheelZoom
 				className="flex-1 w-full"
@@ -157,6 +174,20 @@ export default function Landing() {
 					attribution='Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
 					url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
 				/>
+
+				{/* Pane must exist BEFORE the label layers mount */}
+				<Pane name="labels" style={{ zIndex: 650, pointerEvents: "none" }}>
+					<TileLayer
+						pane="labels"
+						attribution="© Esri — World Boundaries & Places"
+						url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"
+					/>
+					<TileLayer
+						pane="labels"
+						attribution="© Esri — Ocean Reference"
+						url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}"
+					/>
+				</Pane>
 
 				<GeoJSON data={data} style={featureStyle} onEachFeature={onEach} />
 
