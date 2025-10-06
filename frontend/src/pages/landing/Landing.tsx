@@ -20,9 +20,13 @@ const data: GeoJsonObject = {
 import VelocityLayer from "./VelocityLayer";
 import HeatmapLayerConnectedComponents from "./HeatmapLayerConnectedComponents";
 import TemperatureSmoothLayer from "./TemperatureSmoothLayer";
+import PhytoplanktonLayer from "./PhytoplanktonLayer";
+import ChlorophyllLayer from "./ChlorophyllLayer";
 import velocitydata from "./ocean_velocity.json"; // Example velocity data
 import vorticitydata from "./vorticity_data.json"; // Vorticity heatmap data
 import temperaturedata from "./temperature_data.json"; // Temperature heatmap data
+import phytoplanktondata from "./phytoplankton_data.json"; // Phytoplankton concentration data
+import chlorophylldata from "./chlorophyll_data.json"; // Chlorophyll-a concentration data
 
 /** Imperatively fly the map when target changes */
 function FlyTo({ target, zoom = 13 }) {
@@ -41,7 +45,7 @@ export default function Landing() {
 	const [coords, setCoords] = useState({ lat: "", lng: "" });
 	const [target, setTarget] = useState(null);
 	const [velocity, setVelocity] = useState(null);       // loaded velocity data
-	const [activeLayer, setActiveLayer] = useState('velocity'); // 'velocity' | 'eddies' | 'temperature' | null
+	const [activeLayers, setActiveLayers] = useState(new Set(['velocity'])); // Set of active layers for multi-selection
 	const markerRef = useRef(null);
 
 	// Load velocity data from /public/velocity.json (GRIB-like U/V format)
@@ -129,12 +133,22 @@ export default function Landing() {
 					{/* Ocean Current Button */}
 					<button
 						type="button"
-						onClick={() => setActiveLayer(activeLayer === 'velocity' ? null : 'velocity')}
+						onClick={() => {
+							const newLayers = new Set(activeLayers);
+							if (newLayers.has('velocity')) {
+								newLayers.delete('velocity');
+							} else {
+								newLayers.add('velocity');
+								// Remove eddies when adding velocity (mutually exclusive)
+								newLayers.delete('eddies');
+							}
+							setActiveLayers(newLayers);
+						}}
 						disabled={!velocityReady}
-						aria-pressed={activeLayer === 'velocity' || activeLayer === 'eddies'}
+						aria-pressed={activeLayers.has('velocity')}
 						aria-label="Show ocean current layer"
 						className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200
-							${activeLayer === 'velocity' || activeLayer === 'eddies'
+							${activeLayers.has('velocity')
 								? 'bg-blue-600 text-white shadow-md'
 								: velocityReady
 									? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -146,11 +160,21 @@ export default function Landing() {
 					{/* Mesoscale Eddies Button */}
 					<button
 						type="button"
-						onClick={() => setActiveLayer(activeLayer === 'eddies' ? null : 'eddies')}
-						aria-pressed={activeLayer === 'eddies'}
+						onClick={() => {
+							const newLayers = new Set(activeLayers);
+							if (newLayers.has('eddies')) {
+								newLayers.delete('eddies');
+							} else {
+								newLayers.add('eddies');
+								// Remove velocity when adding eddies (mutually exclusive)
+								newLayers.delete('velocity');
+							}
+							setActiveLayers(newLayers);
+						}}
+						aria-pressed={activeLayers.has('eddies')}
 						aria-label="Show mesoscale eddies layer"
 						className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200
-							${activeLayer === 'eddies'
+							${activeLayers.has('eddies')
 								? 'bg-purple-600 text-white shadow-md'
 								: 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
 					>
@@ -160,15 +184,67 @@ export default function Landing() {
 					{/* Temperature Button */}
 					<button
 						type="button"
-						onClick={() => setActiveLayer(activeLayer === 'temperature' ? null : 'temperature')}
-						aria-pressed={activeLayer === 'temperature'}
+						onClick={() => {
+							const newLayers = new Set(activeLayers);
+							if (newLayers.has('temperature')) {
+								newLayers.delete('temperature');
+							} else {
+								newLayers.add('temperature');
+							}
+							setActiveLayers(newLayers);
+						}}
+						aria-pressed={activeLayers.has('temperature')}
 						aria-label="Show temperature layer"
 						className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200
-							${activeLayer === 'temperature'
+							${activeLayers.has('temperature')
 								? 'bg-orange-600 text-white shadow-md'
 								: 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
 					>
 						Temperature
+					</button>
+
+					{/* Phytoplankton Button */}
+					<button
+						type="button"
+						onClick={() => {
+							const newLayers = new Set(activeLayers);
+							if (newLayers.has('phytoplankton')) {
+								newLayers.delete('phytoplankton');
+							} else {
+								newLayers.add('phytoplankton');
+							}
+							setActiveLayers(newLayers);
+						}}
+						aria-pressed={activeLayers.has('phytoplankton')}
+						aria-label="Show phytoplankton layer"
+						className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200
+							${activeLayers.has('phytoplankton')
+								? 'bg-green-600 text-white shadow-md'
+								: 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+					>
+						Phytoplankton
+					</button>
+
+					{/* Chlorophyll Button */}
+					<button
+						type="button"
+						onClick={() => {
+							const newLayers = new Set(activeLayers);
+							if (newLayers.has('chlorophyll')) {
+								newLayers.delete('chlorophyll');
+							} else {
+								newLayers.add('chlorophyll');
+							}
+							setActiveLayers(newLayers);
+						}}
+						aria-pressed={activeLayers.has('chlorophyll')}
+						aria-label="Show chlorophyll layer"
+						className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200
+							${activeLayers.has('chlorophyll')
+								? 'bg-teal-600 text-white shadow-md'
+								: 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+					>
+						Chlorophyll
 					</button>
 
 					{/* Coordinate Input Box */}
@@ -232,10 +308,10 @@ export default function Landing() {
 				<GeoJSON data={data} style={featureStyle} onEachFeature={onEach} />
 
 				{/* Ocean Current overlay - shown when velocity OR eddies is active */}
-				{velocityReady && (activeLayer === 'velocity' || activeLayer === 'eddies') && <VelocityLayer data={velocity} />}
+				{velocityReady && (activeLayers.has('velocity') || activeLayers.has('eddies')) && <VelocityLayer data={velocity} />}
 
 				{/* Mesoscale eddies (vorticity) heatmap overlay */}
-				{activeLayer === 'eddies' && (
+				{activeLayers.has('eddies') && (
 					<HeatmapLayerConnectedComponents
 						data={vorticitydata}
 						showLegend={true}
@@ -244,11 +320,32 @@ export default function Landing() {
 				)}
 
 				{/* Temperature smooth overlay - Sea Surface Temperature */}
-				{activeLayer === 'temperature' && (
+				{activeLayers.has('temperature') && (
 					<TemperatureSmoothLayer
 						data={temperaturedata}
 						showLegend={true}
 						useCircles={true}  // Set to false for overlapping rectangles
+						legendPosition={0}  // Top position
+					/>
+				)}
+
+				{/* Phytoplankton concentration overlay */}
+				{activeLayers.has('phytoplankton') && (
+					<PhytoplanktonLayer
+						data={phytoplanktondata}
+						showLegend={true}
+						useCircles={true}  // Set to false for grid rectangles
+						legendPosition={1}  // Middle position
+					/>
+				)}
+
+				{/* Chlorophyll-a concentration overlay */}
+				{activeLayers.has('chlorophyll') && (
+					<ChlorophyllLayer
+						data={chlorophylldata}
+						showLegend={true}
+						useCircles={true}  // Set to false for grid rectangles
+						legendPosition={2}  // Bottom position
 					/>
 				)}
 

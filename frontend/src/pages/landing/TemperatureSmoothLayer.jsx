@@ -4,21 +4,24 @@ import { useMap } from "react-leaflet";
 import L from "leaflet";
 
 // TemperatureLegend component (final version)
-const TemperatureLegend = ({ show }) => {
+const TemperatureLegend = ({ show, position = 0 }) => {
 	if (!show) return null;
+
+	// Calculate position based on index (0=top, 1=middle, 2=bottom)
+	const bottomOffset = position === 0 ? '430px' : position === 1 ? '230px' : '30px';
 
 	return (
 		<div
 			aria-label="Shark habitat temperature legend"
 			style={{
 				position: 'absolute',
-				bottom: '30px',
+				bottom: bottomOffset,
 				right: '10px',
 				backgroundColor: 'rgba(255, 255, 255, 0.95)',
 				padding: '12px',
 				borderRadius: '8px',
 				boxShadow: '0 2px 6px rgba(0, 0, 0, 0.3)',
-				zIndex: 1000,
+				zIndex: 1000 + position, // Ensure proper stacking
 				fontSize: '12px',
 				fontFamily: 'Arial, sans-serif',
 				maxWidth: '90vw',
@@ -110,7 +113,7 @@ const getTemperatureColor = (temp) => {
 	return 'rgba(75, 0, 0, 0.6)';                        // Very Dark Red
 };
 
-export default function TemperatureSmoothLayer({ data, showLegend = true, useCircles = false }) {
+export default function TemperatureSmoothLayer({ data, showLegend = true, useCircles = false, legendPosition = 0 }) {
 	const map = useMap();
 
 	useEffect(() => {
@@ -222,7 +225,7 @@ export default function TemperatureSmoothLayer({ data, showLegend = true, useCir
 
 	return (
 		<>
-			<TemperatureLegend show={showLegend} />
+			<TemperatureLegend show={showLegend} position={legendPosition} />
 		</>
 	);
 }
