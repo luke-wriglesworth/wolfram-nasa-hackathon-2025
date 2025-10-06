@@ -10,7 +10,13 @@ import {
 	Pane
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import data from "./sample_geojson.json";
+import sampleData from "./sample_geojson.json";
+import type { GeoJsonObject } from "geojson";
+
+const data: GeoJsonObject = {
+	...sampleData,
+	type: "FeatureCollection"
+};
 import VelocityLayer from "./VelocityLayer";
 import HeatmapLayerConnectedComponents from "./HeatmapLayerConnectedComponents";
 import TemperatureSmoothLayer from "./TemperatureSmoothLayer";
