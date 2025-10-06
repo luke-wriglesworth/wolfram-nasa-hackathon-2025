@@ -4,7 +4,7 @@ import { useMap } from "react-leaflet";
 import L from "leaflet";
 
 // PhytoplanktonLegend component
-const PhytoplanktonLegend = ({ show, metadata, position = 1, totalLegends = 1, explicitBottom, onHeight }) => {
+const PhytoplanktonLegend = ({ show, metadata, position = 1, totalLegends = 1, explicitBottom, explicitRight, onHeight }) => {
 	if (!show) return null;
 
 	// Calculate position dynamically based on position and total legends
@@ -29,7 +29,7 @@ return (
     style={{
       position: 'absolute',
       bottom: bottomOffset,
-      right: '10px',
+  right: explicitRight != null ? `${explicitRight}px` : '10px',
       backgroundColor: 'rgba(255, 255, 255, 0.96)',
       padding: '14px',
       borderRadius: '10px',
@@ -156,12 +156,13 @@ const getPhytoplanktonColor = (concentration) => {
 };
 
 export default function PhytoplanktonLayer({
-	data,
-	showLegend = true,
-	legendPosition = 1,
-	totalLegends = 1,
-	legendBottomOffset,
-	onLegendHeight
+  data,
+  showLegend = true,
+  legendPosition = 1,
+  totalLegends = 1,
+  legendBottomOffset,
+  legendRightOffset,
+  onLegendHeight
 }) {
 	const map = useMap();
 
@@ -231,13 +232,14 @@ export default function PhytoplanktonLayer({
 	}, [map, data]);
 
 	return (
-		<PhytoplanktonLegend
-			show={showLegend}
-			metadata={data?.metadata}
-			position={legendPosition}
-			totalLegends={totalLegends}
-			explicitBottom={legendBottomOffset}
-			onHeight={onLegendHeight}
-		/>
+    <PhytoplanktonLegend
+      show={showLegend}
+      metadata={data?.metadata}
+      position={legendPosition}
+      totalLegends={totalLegends}
+      explicitBottom={legendBottomOffset}
+      explicitRight={legendRightOffset}
+      onHeight={onLegendHeight}
+    />
 	);
 }

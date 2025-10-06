@@ -6,12 +6,13 @@ import L from "leaflet";
 // TemperatureLegend component with dynamic stacking support
 const TemperatureLegend = ({
 	show,
-	position = 0,          // index of this legend among visible legends
-	totalLegends = 1,      // total number of legends (for potential future use)
-	gap = 12,              // vertical gap between legends (only used when no explicit bottom supplied)
-	baseBottom = 20,       // bottom offset for first legend (only used when no explicit bottom supplied)
-	explicitBottom,        // externally provided bottom offset (takes precedence)
-	onHeight               // optional callback to return measured height once
+	position = 0,          // index among visible legends
+	totalLegends = 1,
+	gap = 12,
+	baseBottom = 20,
+	explicitBottom,        // externally provided bottom offset
+	explicitRight,         // externally provided right offset (for multi-column layout)
+	onHeight
 }) => {
 	const legendRef = useRef(null);
 	const [height, setHeight] = useState(null);
@@ -41,89 +42,113 @@ const TemperatureLegend = ({
 
 	const bottomVal = explicitBottom != null ? explicitBottom : computedBottom;
 
-	return (
-		<div
-			ref={legendRef}
-			aria-label="Shark habitat temperature legend"
-			style={{
-				position: 'absolute',
-				bottom: `${bottomVal}px`,
-				right: '10px',
-				backgroundColor: 'rgba(255, 255, 255, 0.95)',
-				padding: '12px',
-				borderRadius: '8px',
-				boxShadow: '0 2px 6px rgba(0, 0, 0, 0.3)',
-				zIndex: 1000 + position, // Ensure proper stacking order
-				fontSize: '12px',
-				fontFamily: 'Arial, sans-serif',
-				maxWidth: '90vw',
-				width: '200px',
-				transition: 'bottom 0.25s ease'
-			}}
-	 >
-			<div style={{ fontWeight: 'bold', marginBottom: '10px', color: '#1a1a1a', fontSize: '13px' }}>
-				🦈 Shark Habitat Temperature
-			</div>
+return (
+  <div
+    ref={legendRef}
+    aria-label="Sea surface temperature legend (Aqua MODIS SST4)"
+    style={{
+      position: 'absolute',
+      bottom: `${bottomVal}px`,
+      right: explicitRight != null ? `${explicitRight}px` : '10px',
+      backgroundColor: 'rgba(255, 255, 255, 0.96)',
+      padding: '14px',
+      borderRadius: '10px',
+      boxShadow: '0 3px 8px rgba(0, 0, 0, 0.3)',
+      zIndex: 1000 + position,
+      fontSize: '12px',
+      fontFamily: 'Arial, sans-serif',
+      maxWidth: '95vw',
+      width: '270px',
+      border: '1px solid #ddd',
+      transition: 'bottom 0.25s ease'
+    }}
+  >
+    {/* Header */}
+    <div style={{ fontWeight: 'bold', marginBottom: '10px', color: '#1a1a1a', fontSize: '13px' }}>
+      🌊 Sea Surface Temperature (SST)
+    </div>
 
-			<div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-				{/* Optimal */}
-				<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-					<div style={{ width: '20px', height: '12px', background: '#FFD700', borderRadius: '2px', border: '2px solid #FFA500' }}></div>
-					<span style={{ color: '#333', fontWeight: '600' }}>22–26°C Optimal</span>
-				</div>
+    {/* Legend bins */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+      {[
+        { color: '#FFD700', border: '2px solid #FFA500', label: '22–26°C — Optimal', textColor: '#333', bold: true },
+        { color: '#ADFF2F', label: '18–22°C — Good', textColor: '#333' },
+        { color: '#FF6B6B', label: '26–30°C — Tropical species', textColor: '#333' },
+        { color: '#7FFF00', label: '14–18°C — Temperate species', textColor: '#333' },
+        { color: '#00CED1', label: '10–14°C — Cold-water species', textColor: '#333' },
+        { color: '#4169E1', label: '5–10°C — Cold-adapted species', textColor: '#333' },
+        { color: '#8B0000', label: '30°C+ — Limited activity', textColor: '#666', small: true },
+        { color: '#0000CD', label: '0–5°C — Rare sightings', textColor: '#666', small: true },
+        { color: '#000080', label: 'Below 0°C — No sharks', textColor: '#666', small: true }
+      ].map((item, i) => (
+        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div
+            style={{
+              width: '22px',
+              height: '12px',
+              background: item.color,
+              borderRadius: '2px',
+              border: item.border || '1px solid #ccc'
+            }}
+          ></div>
+          <span
+            style={{
+              color: item.textColor,
+              fontSize: item.small ? '11px' : '11.5px',
+              fontWeight: item.bold ? 600 : 400
+            }}
+          >
+            {item.label}
+          </span>
+        </div>
+      ))}
+    </div>
 
-				{/* Good */}
-				<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-					<div style={{ width: '20px', height: '12px', background: '#ADFF2F', borderRadius: '2px' }}></div>
-					<span style={{ color: '#333' }}>18–22°C Good</span>
-				</div>
+    {/* Ecological explanation */}
+    <div
+      style={{
+        marginTop: '12px',
+        fontSize: '10.5px',
+        color: '#444',
+        lineHeight: '1.4',
+        background: 'rgba(240, 248, 255, 0.6)',
+        borderRadius: '6px',
+        padding: '6px 8px'
+      }}
+    >
+      <strong>Ecological relevance:</strong><br />
+      Sea surface temperature strongly influences shark distributions.
+      Warmer (22–26°C) waters favor tropical and pelagic species, while cooler zones support
+      temperate and cold-adapted species. Extreme temperatures reduce activity and foraging success.
+    </div>
 
-				{/* Tropical Species */}
-				<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-					<div style={{ width: '20px', height: '12px', background: '#FF6B6B', borderRadius: '2px' }}></div>
-					<span style={{ color: '#333' }}>26–30°C Tropical Species</span>
-				</div>
+    {/* Dataset metadata */}
+    <div
+      style={{
+        marginTop: '10px',
+        fontSize: '10px',
+        color: '#777',
+        borderTop: '1px solid #ddd',
+        paddingTop: '6px',
+        lineHeight: '1.3'
+      }}
+    >
+      <strong>Dataset:</strong><br />
+      <span style={{ fontSize: '10px' }}>
+        <strong>Aqua MODIS SST4</strong> — Level-3 Mapped (L3m), 9 km, Daytime<br />
+        Variable: <strong>sst4</strong> Units: <strong>°C</strong><br />
+        Date: 2025-10-03
+      </span>
+    </div>
 
-				{/* Temperate Species */}
-				<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-					<div style={{ width: '20px', height: '12px', background: '#7FFF00', borderRadius: '2px' }}></div>
-					<span style={{ color: '#333' }}>14–18°C Temperate Species</span>
-				</div>
-
-				{/* Cold-Water Species */}
-				<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-					<div style={{ width: '20px', height: '12px', background: '#00CED1', borderRadius: '2px' }}></div>
-					<span style={{ color: '#333' }}>10–14°C Cold-Water Species</span>
-				</div>
-
-				{/* Cold-Adapted Species */}
-				<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-					<div style={{ width: '20px', height: '12px', background: '#4169E1', borderRadius: '2px' }}></div>
-					<span style={{ color: '#333' }}>5–10°C Cold-Adapted Species</span>
-				</div>
-
-				{/* Limited Activity */}
-				<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-					<div style={{ width: '20px', height: '12px', background: '#8B0000', borderRadius: '2px' }}></div>
-					<span style={{ color: '#666', fontSize: '11px' }}>30°C+ Limited Activity</span>
-				</div>
-
-				{/* Rare Sightings */}
-				<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-					<div style={{ width: '20px', height: '12px', background: '#0000CD', borderRadius: '2px' }}></div>
-					<span style={{ color: '#666', fontSize: '11px' }}>0–5°C Rare Sightings</span>
-				</div>
-
-				{/* No Sharks */}
-				<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-					<div style={{ width: '20px', height: '12px', background: '#000080', borderRadius: '2px' }}></div>
-					<span style={{ color: '#666', fontSize: '11px' }}>Below 0°C No Sharks</span>
-				</div>
-			</div>
-		</div>
-	);
+    {/* Attribution */}
+    <div style={{ marginTop: '6px', fontSize: '9.5px', color: '#999', fontStyle: 'italic' }}>
+      Source: NASA OceanColor (OBPG) — Near Real-Time SST4
+    </div>
+  </div>
+);
+	
 };
-
 // Function to get color based on temperature with better gradient
 const getTemperatureColor = (temp) => {
 	// More gradual color transitions
@@ -152,6 +177,7 @@ export default function TemperatureSmoothLayer({
 	legendPosition = 0,
 	totalLegends = 1,
 	legendBottomOffset,           // external stacking position (number of px)
+	legendRightOffset,            // optional horizontal shift (px from right)
 	onLegendHeight                // callback with measured legend height
 }) {
 	const map = useMap();
@@ -269,6 +295,7 @@ export default function TemperatureSmoothLayer({
 				position={legendPosition}
 				totalLegends={totalLegends}
 				explicitBottom={typeof legendBottomOffset === 'number' ? legendBottomOffset : undefined}
+				explicitRight={typeof legendRightOffset === 'number' ? legendRightOffset : undefined}
 				onHeight={onLegendHeight}
 			/>
 		</>

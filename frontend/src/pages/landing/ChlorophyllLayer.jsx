@@ -4,7 +4,7 @@ import { useMap } from "react-leaflet";
 import L from "leaflet";
 
 // ChlorophyllLegend component
-const ChlorophyllLegend = ({ show, metadata, position = 2, totalLegends = 1, explicitBottom, onHeight }) => {
+const ChlorophyllLegend = ({ show, metadata, position = 2, totalLegends = 1, explicitBottom, explicitRight, onHeight }) => {
 	if (!show) return null;
 
 	// Calculate position dynamically based on position and total legends
@@ -29,7 +29,7 @@ return (
     style={{
       position: 'absolute',
       bottom: bottomOffset,
-      right: '10px',
+  right: explicitRight != null ? `${explicitRight}px` : '10px',
       backgroundColor: 'rgba(255, 255, 255, 0.96)',
       padding: '14px',
       borderRadius: '10px',
@@ -152,12 +152,13 @@ const getChlorophyllColor = (concentration) => {
 };
 
 export default function ChlorophyllLayer({
-	data,
-	showLegend = true,
-	legendPosition = 2,
-	totalLegends = 1,
-	legendBottomOffset,
-	onLegendHeight
+  data,
+  showLegend = true,
+  legendPosition = 2,
+  totalLegends = 1,
+  legendBottomOffset,
+  legendRightOffset,
+  onLegendHeight
 }) {
 	const map = useMap();
 
@@ -227,13 +228,14 @@ export default function ChlorophyllLayer({
 	}, [map, data]);
 
 	return (
-		<ChlorophyllLegend
-			show={showLegend}
-			metadata={data?.metadata}
-			position={legendPosition}
-			totalLegends={totalLegends}
-			explicitBottom={legendBottomOffset}
-			onHeight={onLegendHeight}
-		/>
+    <ChlorophyllLegend
+      show={showLegend}
+      metadata={data?.metadata}
+      position={legendPosition}
+      totalLegends={totalLegends}
+      explicitBottom={legendBottomOffset}
+      explicitRight={legendRightOffset}
+      onHeight={onLegendHeight}
+    />
 	);
 }

@@ -336,85 +336,76 @@ export default function Landing() {
 
 				{/* Calculate dynamic legend positions based on active layers */}
 				{(() => {
-					const visibleLayers = [];
-					let cumulativeOffset = 30; // Start from bottom with 30px margin
+					// Collect active legends in display order (existing order determines vertical stacking baseline)
+					const order: { key: string; defaultHeight: number }[] = [];
+					if (activeLayers.has('chlorophyll')) order.push({ key: 'chlorophyll', defaultHeight: legendHeights.chlorophyll || 320 });
+					if (activeLayers.has('phytoplankton')) order.push({ key: 'phytoplankton', defaultHeight: legendHeights.phytoplankton || 360 });
+					if (activeLayers.has('temperature')) order.push({ key: 'temperature', defaultHeight: legendHeights.temperature || 260 });
 
-					// Check which layers are visible and calculate positions
-					if (activeLayers.has('chlorophyll')) {
-						visibleLayers.push({
-							type: 'chlorophyll',
-							bottomOffset: cumulativeOffset
-						});
-						// Use stored height or default
-						const height = legendHeights.chlorophyll || 320;
-						cumulativeOffset += height + 20; // Add spacing
+					// Base vertical stacking (single column assumption)
+					const bottomOffsets: Record<string, number> = {};
+					let cumulative = 30;
+					for (const item of order) {
+						bottomOffsets[item.key] = cumulative;
+						cumulative += item.defaultHeight + 20;
 					}
 
-					if (activeLayers.has('phytoplankton')) {
-						visibleLayers.push({
-							type: 'phytoplankton',
-							bottomOffset: cumulativeOffset
-						});
-						// Use stored height or default
-						const height = legendHeights.phytoplankton || 320;
-						cumulativeOffset += height + 20; // Add spacing
+					// Horizontal multi-column logic: if exactly 3 legends visible, make the third appear to the left of the first.
+					const rightOffsets: Record<string, number | undefined> = {};
+					if (order.length === 3) {
+						// Strategy: Keep first two in right column (right=10). Move third to left by setting a larger right offset (~310px) so it appears left.
+						// Determine approximate legend width (use chlorophyll width 270px + margin 30px)
+						const horizontalShift = 270 + 30; // 300px
+						// The third legend is the last in 'order'
+						const third = order[2].key;
+						// Move third left of the first: increase right offset
+						rightOffsets[third] = 10 + horizontalShift; // e.g., 310px from right
+						// Optionally align its vertical position with the first legend instead of stacked below; requirement only specifies horizontal move.
+						bottomOffsets[third] = bottomOffsets[order[0].key];
 					}
-
-					if (activeLayers.has('temperature')) {
-						visibleLayers.push({
-							type: 'temperature',
-							bottomOffset: cumulativeOffset
-						});
-					}
-
-					// Create position lookup with proper typing
-					const offsets: Record<string, number> = {};
-					visibleLayers.forEach(layer => {
-						offsets[layer.type] = layer.bottomOffset;
-					});
 
 					return (
 						<>
-							{/* Temperature smooth overlay - Sea Surface Temperature */}
 							{activeLayers.has('temperature') && (
-									<TemperatureSmoothLayer
-										data={temperaturedata}
-										showLegend={true}
-										legendBottomOffset={offsets.temperature}
-										onLegendHeight={(height: number) => {
-											if (!legendHeights.temperature) {
-												setLegendHeights(prev => ({ ...prev, temperature: height }));
-											}
-										}}
-									/>
+								<TemperatureSmoothLayer
+									data={temperaturedata}
+									showLegend={true}
+									legendBottomOffset={bottomOffsets.temperature}
+									legendRightOffset={rightOffsets.temperature}
+									onLegendHeight={(height: number) => {
+										if (!legendHeights.temperature) {
+											setLegendHeights(prev => ({ ...prev, temperature: height }));
+										}
+									}}
+								/>
 							)}
 
-							{/* Phytoplankton concentration overlay */}
 							{activeLayers.has('phytoplankton') && (
-									<PhytoplanktonLayer
-										data={phytoplanktondata}
-										showLegend={true}
-										legendBottomOffset={offsets.phytoplankton}
-										onLegendHeight={(height: number) => {
-											if (!legendHeights.phytoplankton) {
-												setLegendHeights(prev => ({ ...prev, phytoplankton: height }));
-											}
-										}}
-									/>
+								<PhytoplanktonLayer
+									data={phytoplanktondata}
+									showLegend={true}
+									legendBottomOffset={bottomOffsets.phytoplankton}
+									legendRightOffset={rightOffsets.phytoplankton}
+									onLegendHeight={(height: number) => {
+										if (!legendHeights.phytoplankton) {
+											setLegendHeights(prev => ({ ...prev, phytoplankton: height }));
+										}
+									}}
+								/>
 							)}
 
-							{/* Chlorophyll-a concentration overlay */}
 							{activeLayers.has('chlorophyll') && (
-									<ChlorophyllLayer
-										data={chlorophylldata}
-										showLegend={true}
-										legendBottomOffset={offsets.chlorophyll}
-										onLegendHeight={(height: number) => {
-											if (!legendHeights.chlorophyll) {
-												setLegendHeights(prev => ({ ...prev, chlorophyll: height }));
-											}
-										}}
-									/>
+								<ChlorophyllLayer
+									data={chlorophylldata}
+									showLegend={true}
+									legendBottomOffset={bottomOffsets.chlorophyll}
+									legendRightOffset={rightOffsets.chlorophyll}
+									onLegendHeight={(height: number) => {
+										if (!legendHeights.chlorophyll) {
+											setLegendHeights(prev => ({ ...prev, chlorophyll: height }));
+										}
+									}}
+								/>
 							)}
 						</>
 					);
