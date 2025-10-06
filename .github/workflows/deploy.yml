@@ -33,7 +33,7 @@ jobs:
 
       - name: Install deps
         working-directory: frontend
-        run: npm ci
+        run: npm install
 
       - name: Build (Vite)
         working-directory: frontend
