@@ -22,115 +22,117 @@ const PhytoplanktonLegend = ({ show, metadata, position = 1, totalLegends = 1, e
 		}
 	}, [onHeight]);
 
-	return (
-		<div
-			ref={legendRef}
-			aria-label="Phytoplankton concentration legend"
-			style={{
-				position: 'absolute',
-				bottom: bottomOffset,
-				right: '10px',
-				backgroundColor: 'rgba(255, 255, 255, 0.95)',
-				padding: '12px',
-				borderRadius: '8px',
-				boxShadow: '0 2px 6px rgba(0, 0, 0, 0.3)',
-				zIndex: 1000 + position, // Ensure proper stacking
-				fontSize: '12px',
-				fontFamily: 'Arial, sans-serif',
-				maxWidth: '90vw',
-				width: '240px'
-			}}
-		>
-			<div style={{ fontWeight: 'bold', marginBottom: '10px', color: '#1a1a1a', fontSize: '13px' }}>
-				🌊 Phytoplankton Concentration
-			</div>
+return (
+  <div
+    ref={legendRef}
+    aria-label="Phytoplankton concentration legend with shark habitat explanation"
+    style={{
+      position: 'absolute',
+      bottom: bottomOffset,
+      right: '10px',
+      backgroundColor: 'rgba(255, 255, 255, 0.96)',
+      padding: '14px',
+      borderRadius: '10px',
+      boxShadow: '0 3px 8px rgba(0, 0, 0, 0.3)',
+      zIndex: 1000 + position,
+      fontSize: '12px',
+      fontFamily: 'Arial, sans-serif',
+      maxWidth: '95vw',
+      width: '270px'
+    }}
+  >
+    {/* Header */}
+    <div style={{ fontWeight: 'bold', marginBottom: '10px', color: '#1a1a1a', fontSize: '13px' }}>
+      🌊 Phytoplankton Concentration
+    </div>
 
-			{metadata && (
-				<div style={{ fontSize: '11px', color: '#666', marginBottom: '8px' }}>
-					Date: {metadata.date}<br/>
-					Units: {metadata.units}
-				</div>
-			)}
+    {/* Metadata */}
+    <div style={{ fontSize: '11px', color: '#666', marginBottom: '8px', lineHeight: '1.3' }}>
+      Variable: <strong>prococcus_moana</strong><br />
+      Units: <strong>cells mL⁻¹</strong><br />
+      Date: 2025-10-03
+    </div>
 
-			<div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-				{/* Extremely Rich - Prime feeding */}
-				<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-					<div style={{ width: '20px', height: '12px', background: 'rgba(0, 50, 100, 0.8)', borderRadius: '2px', border: '1px solid #004080' }}></div>
-					<span style={{ color: '#333', fontWeight: '600' }}>&gt;500k Rich Waters</span>
-				</div>
+    {/* Legend bins */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+      {/* Extremely High */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ width: '22px', height: '12px', background: 'rgb(255, 0, 0)', borderRadius: '2px' }}></div>
+        <span style={{ color: '#333', fontWeight: 600 }}>&gt;600 000 — Algal bloom / variable</span>
+      </div>
 
-				{/* Very High */}
-				<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-					<div style={{ width: '20px', height: '12px', background: 'rgba(0, 100, 150, 0.7)', borderRadius: '2px' }}></div>
-					<span style={{ color: '#333', fontSize: '11px' }}>400-500k Very High</span>
-				</div>
+      {/* High */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ width: '22px', height: '12px', background: 'rgb(0, 128, 255)', borderRadius: '2px' }}></div>
+        <span style={{ color: '#333', fontSize: '11px' }}>300 000–600 000 — Excellent feeding grounds</span>
+      </div>
 
-				{/* High */}
-				<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-					<div style={{ width: '20px', height: '12px', background: 'rgba(0, 139, 139, 0.7)', borderRadius: '2px' }}></div>
-					<span style={{ color: '#333', fontSize: '11px' }}>300-400k High</span>
-				</div>
+      {/* Moderate-High */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ width: '22px', height: '12px', background: 'rgb(0, 200, 0)', borderRadius: '2px' }}></div>
+        <span style={{ color: '#333', fontSize: '11px' }}>100 000–300 000 — Good productivity (favorable)</span>
+      </div>
 
-				{/* Very Good */}
-				<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-					<div style={{ width: '20px', height: '12px', background: 'rgba(0, 205, 102, 0.7)', borderRadius: '2px' }}></div>
-					<span style={{ color: '#333', fontSize: '11px' }}>250-300k Very Good</span>
-				</div>
+      {/* Moderate */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ width: '22px', height: '12px', background: 'rgb(173, 255, 47)', borderRadius: '2px' }}></div>
+        <span style={{ color: '#333', fontSize: '11px' }}>30 000–100 000 — Moderate habitat</span>
+      </div>
 
-				{/* Good */}
-				<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-					<div style={{ width: '20px', height: '12px', background: 'rgba(0, 255, 0, 0.7)', borderRadius: '2px' }}></div>
-					<span style={{ color: '#333', fontSize: '11px' }}>200-250k Good</span>
-				</div>
+      {/* Low */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ width: '22px', height: '12px', background: 'rgb(255, 255, 0)', borderRadius: '2px' }}></div>
+        <span style={{ color: '#333', fontSize: '11px' }}>10 000–30 000 — Low productivity</span>
+      </div>
 
-				{/* Moderate */}
-				<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-					<div style={{ width: '20px', height: '12px', background: 'rgba(173, 255, 47, 0.7)', borderRadius: '2px' }}></div>
-					<span style={{ color: '#333', fontSize: '11px' }}>150-200k Moderate</span>
-				</div>
+      {/* Very Low */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ width: '22px', height: '12px', background: 'rgb(255, 215, 0)', borderRadius: '2px' }}></div>
+        <span style={{ color: '#666', fontSize: '11px' }}>&lt;10 000 — Ocean desert (poor)</span>
+      </div>
+    </div>
 
-				{/* Low-Moderate */}
-				<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-					<div style={{ width: '20px', height: '12px', background: 'rgba(255, 255, 0, 0.7)', borderRadius: '2px' }}></div>
-					<span style={{ color: '#333', fontSize: '11px' }}>100-150k Fair</span>
-				</div>
+    {/* Ecological explanation */}
+    <div
+      style={{
+        marginTop: '12px',
+        fontSize: '10.5px',
+        color: '#444',
+        lineHeight: '1.4',
+        background: 'rgba(240, 248, 255, 0.6)',
+        borderRadius: '6px',
+        padding: '6px 8px'
+      }}
+    >
+      <strong>Ecological relevance:</strong><br />
+      Phytoplankton form the base of the marine food web.
+      Higher concentrations support zooplankton and forage fish,
+      creating better feeding conditions for pelagic sharks.
+      <br />
+      <em>Optimal shark habitat typically aligns with 1×10⁵–5×10⁵ cells mL⁻¹ — moderately productive waters that balance food availability and oxygen levels.</em>
+    </div>
 
-				{/* Below Average */}
-				<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-					<div style={{ width: '20px', height: '12px', background: 'rgba(255, 215, 0, 0.7)', borderRadius: '2px' }}></div>
-					<span style={{ color: '#666', fontSize: '11px' }}>75-100k Below Avg</span>
-				</div>
+    {/* Dataset summary */}
+    <div
+      style={{
+        marginTop: '10px',
+        fontSize: '10px',
+        color: '#777',
+        borderTop: '1px solid #ddd',
+        paddingTop: '6px',
+        lineHeight: '1.3'
+      }}
+    >
+      <strong>Data summary:</strong><br />
+      Min: 2 Max: 826 016 Mean: 227 932 (cells mL⁻¹)
+    </div>
 
-				{/* Poor */}
-				<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-					<div style={{ width: '20px', height: '12px', background: 'rgba(255, 140, 0, 0.7)', borderRadius: '2px' }}></div>
-					<span style={{ color: '#666', fontSize: '11px' }}>50-75k Poor</span>
-				</div>
-
-				{/* Very Poor */}
-				<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-					<div style={{ width: '20px', height: '12px', background: 'rgba(255, 69, 0, 0.7)', borderRadius: '2px' }}></div>
-					<span style={{ color: '#666', fontSize: '11px' }}>25-50k Very Poor</span>
-				</div>
-
-				{/* Extremely Poor */}
-				<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-					<div style={{ width: '20px', height: '12px', background: 'rgba(220, 20, 60, 0.7)', borderRadius: '2px' }}></div>
-					<span style={{ color: '#666', fontSize: '11px' }}>10-25k Barren</span>
-				</div>
-
-				{/* Ocean Desert */}
-				<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-					<div style={{ width: '20px', height: '12px', background: 'rgba(139, 0, 0, 0.7)', borderRadius: '2px' }}></div>
-					<span style={{ color: '#666', fontSize: '11px' }}>&lt;10k Desert</span>
-				</div>
-			</div>
-
-			<div style={{ marginTop: '10px', fontSize: '10px', color: '#888', fontStyle: 'italic' }}>
-				Higher phytoplankton = More prey fish = Better shark habitat
-			</div>
-		</div>
-	);
+    {/* Attribution */}
+    <div style={{ marginTop: '6px', fontSize: '9.5px', color: '#999', fontStyle: 'italic' }}>
+      Data source: <strong>prococcus_moana model dataset</strong> (2025-10-03)
+    </div>
+  </div>
+);
 };
 
 // Function to get color based on phytoplankton concentration

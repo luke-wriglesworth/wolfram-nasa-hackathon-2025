@@ -22,121 +22,133 @@ const ChlorophyllLegend = ({ show, metadata, position = 2, totalLegends = 1, exp
 		}
 	}, [onHeight]);
 
-	return (
-		<div
-			ref={legendRef}
-			aria-label="Chlorophyll-a concentration legend"
-			style={{
-				position: 'absolute',
-				bottom: bottomOffset,
-				right: '10px',
-				backgroundColor: 'rgba(255, 255, 255, 0.95)',
-				padding: '12px',
-				borderRadius: '8px',
-				boxShadow: '0 2px 6px rgba(0, 0, 0, 0.3)',
-				zIndex: 1000 + position, // Ensure proper stacking
-				fontSize: '12px',
-				fontFamily: 'Arial, sans-serif',
-				maxWidth: '90vw',
-				width: '240px'
-			}}
-		>
-			<div style={{ fontWeight: 'bold', marginBottom: '10px', color: '#1a1a1a', fontSize: '13px' }}>
-				🌊 Chlorophyll-a Concentration
-			</div>
+return (
+  <div
+    ref={legendRef}
+    aria-label="Chlorophyll-a concentration legend with shark habitat explanation"
+    style={{
+      position: 'absolute',
+      bottom: bottomOffset,
+      right: '10px',
+      backgroundColor: 'rgba(255, 255, 255, 0.96)',
+      padding: '14px',
+      borderRadius: '10px',
+      boxShadow: '0 3px 8px rgba(0, 0, 0, 0.3)',
+      zIndex: 1000 + position,
+      fontSize: '12px',
+      fontFamily: 'Arial, sans-serif',
+      maxWidth: '95vw',
+      width: '270px'
+    }}
+  >
+    {/* Header */}
+    <div style={{ fontWeight: 'bold', marginBottom: '10px', color: '#1a1a1a', fontSize: '13px' }}>
+      🌊 Chlorophyll-a Concentration (mg m⁻³)
+    </div>
 
-			{metadata && (
-				<div style={{ fontSize: '11px', color: '#666', marginBottom: '8px' }}>
-					Date: {metadata.date}<br/>
-					Units: {metadata.units}
-				</div>
-			)}
+    {/* Metadata */}
+    <div style={{ fontSize: '11px', color: '#666', marginBottom: '8px', lineHeight: '1.3' }}>
+      Variable: <strong>chlor_a</strong><br />
+      Units: <strong>mg m⁻³</strong><br />
+      Date: 2025-10-03
+    </div>
 
-			<div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-				{/* Ultra High - Eutrophic waters */}
-				<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-					<div style={{ width: '20px', height: '12px', background: 'rgba(0, 255, 200, 0.8)', borderRadius: '2px', border: '1px solid #00CCA0' }}></div>
-					<span style={{ color: '#333', fontWeight: '600' }}>&gt;20 Eutrophic</span>
-				</div>
+    {/* Legend bins */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+      {/* Hyper-eutrophic */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ width: '22px', height: '12px', background: 'rgb(255, 0, 0)', borderRadius: '2px' }}></div>
+        <span style={{ color: '#333', fontWeight: 600 }}>&gt;20 — Algal Bloom / Hypoxic Risk</span>
+      </div>
 
-				{/* Very High - Highly productive */}
-				<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-					<div style={{ width: '20px', height: '12px', background: 'rgba(0, 255, 255, 0.7)', borderRadius: '2px' }}></div>
-					<span style={{ color: '#333', fontSize: '11px' }}>10-20 Very High</span>
-				</div>
+      {/* Eutrophic */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ width: '22px', height: '12px', background: 'rgb(255, 165, 0)', borderRadius: '2px' }}></div>
+        <span style={{ color: '#333', fontSize: '11px' }}>5 – 20 — Highly Productive (Excellent Feeding)</span>
+      </div>
 
-				{/* High - Rich waters */}
-				<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-					<div style={{ width: '20px', height: '12px', background: 'rgba(64, 224, 208, 0.7)', borderRadius: '2px' }}></div>
-					<span style={{ color: '#333', fontSize: '11px' }}>5-10 High</span>
-				</div>
+      {/* Mesotrophic */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ width: '22px', height: '12px', background: 'rgb(255, 255, 0)', borderRadius: '2px' }}></div>
+        <span style={{ color: '#333', fontSize: '11px' }}>1 – 5 — Moderate Productivity (Preferred Habitat)</span>
+      </div>
 
-				{/* Moderately High */}
-				<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-					<div style={{ width: '20px', height: '12px', background: 'rgba(0, 206, 209, 0.7)', borderRadius: '2px' }}></div>
-					<span style={{ color: '#333', fontSize: '11px' }}>2-5 Moderate-High</span>
-				</div>
+      {/* Oligotrophic */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ width: '22px', height: '12px', background: 'rgb(0, 255, 0)', borderRadius: '2px' }}></div>
+        <span style={{ color: '#333', fontSize: '11px' }}>0.3 – 1 — Low Productivity (Common Ocean)</span>
+      </div>
 
-				{/* Moderate - Good productivity */}
-				<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-					<div style={{ width: '20px', height: '12px', background: 'rgba(0, 191, 255, 0.7)', borderRadius: '2px' }}></div>
-					<span style={{ color: '#333', fontSize: '11px' }}>1-2 Moderate</span>
-				</div>
+      {/* Ultra-oligotrophic */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ width: '22px', height: '12px', background: 'rgb(0, 128, 255)', borderRadius: '2px' }}></div>
+        <span style={{ color: '#333', fontSize: '11px' }}>0.1 – 0.3 — Very Low (Limited Prey)</span>
+      </div>
 
-				{/* Low-Moderate */}
-				<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-					<div style={{ width: '20px', height: '12px', background: 'rgba(70, 130, 180, 0.7)', borderRadius: '2px' }}></div>
-					<span style={{ color: '#333', fontSize: '11px' }}>0.5-1 Fair</span>
-				</div>
+      {/* Oceanic Gyres */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ width: '22px', height: '12px', background: 'rgb(0, 0, 128)', borderRadius: '2px' }}></div>
+        <span style={{ color: '#666', fontSize: '11px' }}>&lt;0.1 — Ocean Deserts (Poor Habitat)</span>
+      </div>
+    </div>
 
-				{/* Low - Mesotrophic */}
-				<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-					<div style={{ width: '20px', height: '12px', background: 'rgba(100, 149, 237, 0.7)', borderRadius: '2px' }}></div>
-					<span style={{ color: '#333', fontSize: '11px' }}>0.2-0.5 Low</span>
-				</div>
+    {/* Ecological explanation */}
+    <div
+      style={{
+        marginTop: '12px',
+        fontSize: '10.5px',
+        color: '#444',
+        lineHeight: '1.4',
+        background: 'rgba(240, 248, 255, 0.6)',
+        borderRadius: '6px',
+        padding: '6px 8px'
+      }}
+    >
+      <strong>Ecological relevance:</strong><br />
+      Chlorophyll-a indicates phytoplankton biomass — the foundation of marine food webs.
+      Regions with <em>moderate to high chlorophyll</em> (1–20 mg m⁻³) support zooplankton
+      and forage fish, forming rich feeding grounds for pelagic sharks.
+      <br />
+      <em>Sharks often aggregate along productivity fronts and coastal upwelling zones where prey density peaks.</em>
+    </div>
 
-				{/* Very Low */}
-				<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-					<div style={{ width: '20px', height: '12px', background: 'rgba(147, 112, 219, 0.7)', borderRadius: '2px' }}></div>
-					<span style={{ color: '#666', fontSize: '11px' }}>0.1-0.2 Very Low</span>
-				</div>
+    {/* Dataset summary */}
+    <div
+      style={{
+        marginTop: '10px',
+        fontSize: '10px',
+        color: '#777',
+        borderTop: '1px solid #ddd',
+        paddingTop: '6px',
+        lineHeight: '1.3'
+      }}
+    >
+      <strong>Data summary:</strong><br />
+      Min: 0.008 Max: 85.24 Mean: 0.34 (mg m⁻³)
+    </div>
 
-				{/* Oligotrophic - Clear waters */}
-				<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-					<div style={{ width: '20px', height: '12px', background: 'rgba(138, 43, 226, 0.7)', borderRadius: '2px' }}></div>
-					<span style={{ color: '#666', fontSize: '11px' }}>0.05-0.1 Oligotrophic</span>
-				</div>
-
-				{/* Ultra-oligotrophic */}
-				<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-					<div style={{ width: '20px', height: '12px', background: 'rgba(75, 0, 130, 0.7)', borderRadius: '2px' }}></div>
-					<span style={{ color: '#666', fontSize: '11px' }}>&lt;0.05 Ultra-low</span>
-				</div>
-			</div>
-
-			<div style={{ marginTop: '10px', fontSize: '10px', color: '#888', fontStyle: 'italic' }}>
-				Higher chlorophyll = More primary production = Better feeding grounds
-			</div>
-		</div>
-	);
+    {/* Attribution */}
+    <div style={{ marginTop: '6px', fontSize: '9.5px', color: '#999', fontStyle: 'italic' }}>
+      Data source: <strong>NASA PACE (chlor_a)</strong> — global ocean color product.
+    </div>
+  </div>
+);
 };
-
-// Function to get color based on chlorophyll-a concentration (mg/m³)
-// DISTINCT Color scale: Purple (ultra-low) -> Cyan -> Teal -> Turquoise (high)
+// Function to get color based on chlorophyll-a concentration (mg m⁻³)
+// EXACT palette (solid colors) synchronized with legend chips:
+// <0.1      : #000080 (Oceanic Gyres / extremely clear)
+// 0.1–0.3   : #0080FF (Ultra-oligotrophic)
+// 0.3–1     : #00FF00 (Oligotrophic)
+// 1–5       : #FFFF00 (Mesotrophic)
+// 5–20      : #FFA500 (Eutrophic)
+// >20       : #FF0000 (Algal Bloom / Hyper-eutrophic)
 const getChlorophyllColor = (concentration) => {
-	// Chlorophyll-a concentration thresholds in mg/m³
-	// Using a purple-to-turquoise scale to be distinct from other layers
-
-	if (concentration < 0.05) return 'rgba(75, 0, 130, 0.7)';        // Indigo - Ultra-oligotrophic
-	if (concentration < 0.1) return 'rgba(138, 43, 226, 0.7)';       // Blue Violet - Oligotrophic
-	if (concentration < 0.2) return 'rgba(147, 112, 219, 0.7)';      // Medium Purple - Very low
-	if (concentration < 0.5) return 'rgba(100, 149, 237, 0.7)';      // Cornflower Blue - Low
-	if (concentration < 1.0) return 'rgba(70, 130, 180, 0.7)';       // Steel Blue - Low-Moderate
-	if (concentration < 2.0) return 'rgba(0, 191, 255, 0.7)';        // Deep Sky Blue - Moderate
-	if (concentration < 5.0) return 'rgba(0, 206, 209, 0.7)';        // Dark Turquoise - Moderate-High
-	if (concentration < 10.0) return 'rgba(64, 224, 208, 0.7)';      // Turquoise - High
-	if (concentration < 20.0) return 'rgba(0, 255, 255, 0.7)';       // Cyan - Very High
-	return 'rgba(0, 255, 200, 0.8)';                                 // Bright Turquoise - Eutrophic
+  if (concentration < 0.1) return '#000080';
+  if (concentration < 0.3) return '#0080FF';
+  if (concentration < 1.0) return '#00FF00';
+  if (concentration < 5.0) return '#FFFF00';
+  if (concentration < 20.0) return '#FFA500';
+  return '#FF0000';
 };
 
 export default function ChlorophyllLayer({
@@ -196,12 +208,12 @@ export default function ChlorophyllLayer({
 				[lat - half, lon - half],
 				[lat + half, lon + half]
 			];
-			const rect = L.rectangle(bounds, {
-				stroke: false,
-				fillColor: getChlorophyllColor(concentration),
-				fillOpacity: 0.5,
-				interactive: false
-			});
+      const rect = L.rectangle(bounds, {
+        stroke: false,
+        fillColor: getChlorophyllColor(concentration),
+        fillOpacity: 0.6, // slightly stronger since colors are solid now
+        interactive: false
+      });
 			rect.addTo(featureGroup);
 		});
 
