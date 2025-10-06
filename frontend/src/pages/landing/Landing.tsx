@@ -13,8 +13,10 @@ import "leaflet/dist/leaflet.css";
 import data from "./sample_geojson.json";
 import VelocityLayer from "./VelocityLayer";
 import HeatmapLayerConnectedComponents from "./HeatmapLayerConnectedComponents";
+import TemperatureSmoothLayer from "./TemperatureSmoothLayer";
 import velocitydata from "./ocean_velocity.json"; // Example velocity data
 import vorticitydata from "./vorticity_data.json"; // Vorticity heatmap data
+import temperaturedata from "./temperature_data.json"; // Temperature heatmap data
 
 /** Imperatively fly the map when target changes */
 function FlyTo({ target, zoom = 13 }) {
@@ -33,8 +35,7 @@ export default function Landing() {
 	const [coords, setCoords] = useState({ lat: "", lng: "" });
 	const [target, setTarget] = useState(null);
 	const [velocity, setVelocity] = useState(null);       // loaded velocity data
-	const [showVelocity, setShowVelocity] = useState(true); // toggle state
-	const [showVorticity, setShowVorticity] = useState(false); // vorticity toggle
+	const [activeLayer, setActiveLayer] = useState('velocity'); // 'velocity' | 'eddies' | 'temperature' | null
 	const markerRef = useRef(null);
 
 	// Load velocity data from /public/velocity.json (GRIB-like U/V format)
@@ -115,44 +116,54 @@ export default function Landing() {
 					Wolfram&nbsp;-&nbsp; 🦈 SharksFromSpace
 				</span>
 
-				<div className="flex items-center gap-4">
-					{/* Velocity Toggle */}
-					<label className={`flex items-center gap-2 ${velocityReady ? "" : "opacity-50"}`}>
-						<span className="text-sm">Velocity</span>
-						<button
-							type="button"
-							onClick={() => velocityReady && setShowVelocity((s) => !s)}
-							aria-pressed={showVelocity}
-							aria-label="Toggle velocity layer"
-							disabled={!velocityReady}
-							className={`relative inline-flex h-6 w-11 items-center rounded-full transition
-                ${showVelocity ? "bg-blue-600" : "bg-gray-500"}
-                ${velocityReady ? "cursor-pointer" : "cursor-not-allowed"}`}
-						>
-							<span
-								className={`inline-block h-5 w-5 transform rounded-full bg-white transition
-                  ${showVelocity ? "translate-x-6" : "translate-x-1"}`}
-							/>
-						</button>
-					</label>
+				<div className="flex items-center gap-2">
+					{/* Layer Selection Buttons */}
+					<span className="text-sm text-gray-600 mr-2">Layers:</span>
 
-					{/* Vorticity Toggle */}
-					<label className="flex items-center gap-2">
-						<span className="text-sm">Vorticity</span>
-						<button
-							type="button"
-							onClick={() => setShowVorticity((s) => !s)}
-							aria-pressed={showVorticity}
-							aria-label="Toggle vorticity layer"
-							className={`relative inline-flex h-6 w-11 items-center rounded-full transition cursor-pointer
-                ${showVorticity ? "bg-purple-600" : "bg-gray-500"}`}
-						>
-							<span
-								className={`inline-block h-5 w-5 transform rounded-full bg-white transition
-                  ${showVorticity ? "translate-x-6" : "translate-x-1"}`}
-							/>
-						</button>
-					</label>
+					{/* Ocean Current Button */}
+					<button
+						type="button"
+						onClick={() => setActiveLayer(activeLayer === 'velocity' ? null : 'velocity')}
+						disabled={!velocityReady}
+						aria-pressed={activeLayer === 'velocity' || activeLayer === 'eddies'}
+						aria-label="Show ocean current layer"
+						className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200
+							${activeLayer === 'velocity' || activeLayer === 'eddies'
+								? 'bg-blue-600 text-white shadow-md'
+								: velocityReady
+									? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+									: 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+					>
+						Ocean Current
+					</button>
+
+					{/* Mesoscale Eddies Button */}
+					<button
+						type="button"
+						onClick={() => setActiveLayer(activeLayer === 'eddies' ? null : 'eddies')}
+						aria-pressed={activeLayer === 'eddies'}
+						aria-label="Show mesoscale eddies layer"
+						className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200
+							${activeLayer === 'eddies'
+								? 'bg-purple-600 text-white shadow-md'
+								: 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+					>
+						Mesoscale Eddies
+					</button>
+
+					{/* Temperature Button */}
+					<button
+						type="button"
+						onClick={() => setActiveLayer(activeLayer === 'temperature' ? null : 'temperature')}
+						aria-pressed={activeLayer === 'temperature'}
+						aria-label="Show temperature layer"
+						className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200
+							${activeLayer === 'temperature'
+								? 'bg-orange-600 text-white shadow-md'
+								: 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+					>
+						Temperature
+					</button>
 
 					{/* Coordinate Input Box */}
 					<form
@@ -214,13 +225,24 @@ export default function Landing() {
 
 				<GeoJSON data={data} style={featureStyle} onEachFeature={onEach} />
 
-				{/* Velocity overlay (respect toggle; only renders after data loads) */}
-				{velocityReady && showVelocity && <VelocityLayer data={velocity} />}
+				{/* Ocean Current overlay - shown when velocity OR eddies is active */}
+				{velocityReady && (activeLayer === 'velocity' || activeLayer === 'eddies') && <VelocityLayer data={velocity} />}
 
-				{/* Vorticity heatmap overlay */}
-				{showVorticity && (
+				{/* Mesoscale eddies (vorticity) heatmap overlay */}
+				{activeLayer === 'eddies' && (
 					<HeatmapLayerConnectedComponents
 						data={vorticitydata}
+						showLegend={true}
+						isVorticity={true}
+					/>
+				)}
+
+				{/* Temperature smooth overlay - Sea Surface Temperature */}
+				{activeLayer === 'temperature' && (
+					<TemperatureSmoothLayer
+						data={temperaturedata}
+						showLegend={true}
+						useCircles={true}  // Set to false for overlapping rectangles
 					/>
 				)}
 
