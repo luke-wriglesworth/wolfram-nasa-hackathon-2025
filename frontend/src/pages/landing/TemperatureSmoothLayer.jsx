@@ -1,33 +1,66 @@
 // TemperatureSmoothLayer - Display temperature with smooth blending
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMap } from "react-leaflet";
 import L from "leaflet";
 
-// TemperatureLegend component (final version)
-const TemperatureLegend = ({ show, position = 0 }) => {
+// TemperatureLegend component with dynamic stacking support
+const TemperatureLegend = ({
+	show,
+	position = 0,          // index of this legend among visible legends
+	totalLegends = 1,      // total number of legends (for potential future use)
+	gap = 12,              // vertical gap between legends (only used when no explicit bottom supplied)
+	baseBottom = 20,       // bottom offset for first legend (only used when no explicit bottom supplied)
+	explicitBottom,        // externally provided bottom offset (takes precedence)
+	onHeight               // optional callback to return measured height once
+}) => {
+	const legendRef = useRef(null);
+	const [height, setHeight] = useState(null);
+	const [computedBottom, setComputedBottom] = useState(baseBottom);
+	const reportedRef = useRef(false);
+
+	// Measure only once (or when show toggles from false->true)
+	useEffect(() => {
+		if (!show) return;
+		if (legendRef.current) {
+			const h = legendRef.current.offsetHeight;
+			setHeight(prev => (prev == null ? h : prev));
+			if (!reportedRef.current && onHeight) {
+				reportedRef.current = true;
+				onHeight(h);
+			}
+		}
+	}, [show]);
+
+		useEffect(() => {
+			if (height != null && explicitBottom == null) {
+				setComputedBottom(baseBottom + position * (height + gap));
+			}
+		}, [height, position, baseBottom, gap, explicitBottom]);
+
 	if (!show) return null;
 
-	// Calculate position based on index (0=top, 1=middle, 2=bottom)
-	const bottomOffset = position === 0 ? '430px' : position === 1 ? '230px' : '30px';
+	const bottomVal = explicitBottom != null ? explicitBottom : computedBottom;
 
 	return (
 		<div
+			ref={legendRef}
 			aria-label="Shark habitat temperature legend"
 			style={{
 				position: 'absolute',
-				bottom: bottomOffset,
+				bottom: `${bottomVal}px`,
 				right: '10px',
 				backgroundColor: 'rgba(255, 255, 255, 0.95)',
 				padding: '12px',
 				borderRadius: '8px',
 				boxShadow: '0 2px 6px rgba(0, 0, 0, 0.3)',
-				zIndex: 1000 + position, // Ensure proper stacking
+				zIndex: 1000 + position, // Ensure proper stacking order
 				fontSize: '12px',
 				fontFamily: 'Arial, sans-serif',
 				maxWidth: '90vw',
-				width: '200px'
+				width: '200px',
+				transition: 'bottom 0.25s ease'
 			}}
-		>
+	 >
 			<div style={{ fontWeight: 'bold', marginBottom: '10px', color: '#1a1a1a', fontSize: '13px' }}>
 				🦈 Shark Habitat Temperature
 			</div>
@@ -113,7 +146,14 @@ const getTemperatureColor = (temp) => {
 	return 'rgba(75, 0, 0, 0.6)';                        // Very Dark Red
 };
 
-export default function TemperatureSmoothLayer({ data, showLegend = true, useCircles = false, legendPosition = 0 }) {
+export default function TemperatureSmoothLayer({
+	data,
+	showLegend = true,
+	legendPosition = 0,
+	totalLegends = 1,
+	legendBottomOffset,           // external stacking position (number of px)
+	onLegendHeight                // callback with measured legend height
+}) {
 	const map = useMap();
 
 	useEffect(() => {
@@ -126,54 +166,53 @@ export default function TemperatureSmoothLayer({ data, showLegend = true, useCir
 		const lats = [...new Set(data.map(p => p[0]))].sort((a, b) => a - b);
 		const lons = [...new Set(data.map(p => p[1]))].sort((a, b) => a - b);
 
-		// Calculate grid spacing
-		const latSpacing = lats.length > 1 ? Math.abs(lats[1] - lats[0]) : 5;
-		const lonSpacing = lons.length > 1 ? Math.abs(lons[1] - lons[0]) : 5;
+		// Calculate grid spacing more robustly (use smallest positive delta)
+		const latSpacing = (() => {
+			if (lats.length < 2) return 5;
+			const diffs = [];
+			for (let i = 1; i < lats.length; i++) {
+				const d = Math.abs(lats[i] - lats[i - 1]);
+				if (d > 0) diffs.push(d);
+			}
+			return diffs.length ? Math.min(...diffs) : 5;
+		})();
+
+		const lonSpacing = (() => {
+			if (lons.length < 2) return 5;
+			const diffs = [];
+			for (let i = 1; i < lons.length; i++) {
+				const d = Math.abs(lons[i] - lons[i - 1]);
+				if (d > 0) diffs.push(d);
+			}
+			return diffs.length ? Math.min(...diffs) : 5;
+		})();
+
+		// Force square cells by using the smaller spacing for both directions
+		const cellSize = Math.min(latSpacing, lonSpacing);
 
 		console.log(`Creating smooth temperature layer with ${data.length} points`);
 
-		if (useCircles) {
-			// Create overlapping circles for smooth blending
-			data.forEach(point => {
-				const [lat, lon, temp] = point;
+		// Always use rectangles (grid mode)
+		data.forEach(point => {
+			const [lat, lon, temp] = point;
 
-				// Radius slightly larger than spacing for overlap
-				const radiusInDegrees = Math.max(latSpacing, lonSpacing) * 0.75;
-				const radiusInMeters = radiusInDegrees * 111000;
+			// Slight overlap for visual smoothing
+			const overlapFactor = 1.15;
+			const bounds = [
+				[lat - (cellSize * overlapFactor)/2, lon - (cellSize * overlapFactor)/2],
+				[lat + (cellSize * overlapFactor)/2, lon + (cellSize * overlapFactor)/2]
+			];
 
-				const circle = L.circle([lat, lon], {
-					radius: radiusInMeters,
-					stroke: false,
-					fillColor: getTemperatureColor(temp),
-					fillOpacity: 0.5,
-					interactive: false
-				});
-
-				circle.addTo(featureGroup);
+			const rect = L.rectangle(bounds, {
+				stroke: false,
+				fillColor: getTemperatureColor(temp),
+				fillOpacity: 0.55,
+				interactive: false,
+				smoothFactor: 1.0
 			});
-		} else {
-			// Create rectangles with overlap for blending
-			data.forEach(point => {
-				const [lat, lon, temp] = point;
 
-				// Make rectangles slightly larger for overlap
-				const overlapFactor = 1.15;
-				const bounds = [
-					[lat - (latSpacing * overlapFactor)/2, lon - (lonSpacing * overlapFactor)/2],
-					[lat + (latSpacing * overlapFactor)/2, lon + (lonSpacing * overlapFactor)/2]
-				];
-
-				const rect = L.rectangle(bounds, {
-					stroke: false,
-					fillColor: getTemperatureColor(temp),
-					fillOpacity: 0.55,
-					interactive: false,
-					smoothFactor: 1.0
-				});
-
-				rect.addTo(featureGroup);
-			});
-		}
+			rect.addTo(featureGroup);
+		});
 
 		// Add click handler for temperature info
 		featureGroup.on('click', function(e) {
@@ -221,11 +260,17 @@ export default function TemperatureSmoothLayer({ data, showLegend = true, useCir
 		return () => {
 			map.removeLayer(featureGroup);
 		};
-	}, [map, data, useCircles]);
+	}, [map, data]);
 
 	return (
 		<>
-			<TemperatureLegend show={showLegend} position={legendPosition} />
+			<TemperatureLegend
+				show={showLegend}
+				position={legendPosition}
+				totalLegends={totalLegends}
+				explicitBottom={typeof legendBottomOffset === 'number' ? legendBottomOffset : undefined}
+				onHeight={onLegendHeight}
+			/>
 		</>
 	);
 }

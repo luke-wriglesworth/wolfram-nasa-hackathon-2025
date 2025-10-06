@@ -9,6 +9,7 @@ import {
 	useMap,
 	Pane
 } from "react-leaflet";
+import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import sampleData from "./sample_geojson.json";
 import type { GeoJsonObject } from "geojson";
@@ -46,6 +47,7 @@ export default function Landing() {
 	const [target, setTarget] = useState(null);
 	const [velocity, setVelocity] = useState(null);       // loaded velocity data
 	const [activeLayers, setActiveLayers] = useState(new Set(['velocity'])); // Set of active layers for multi-selection
+	const [legendHeights, setLegendHeights] = useState<Record<string, number>>({}); // Store actual legend heights
 	const markerRef = useRef(null);
 
 	// Load velocity data from /public/velocity.json (GRIB-like U/V format)
@@ -118,6 +120,23 @@ export default function Landing() {
 		}
 	}, []);
 
+	// Enforce staying within a single world (no infinite horizontal wrap)
+	useEffect(() => {
+		const map: any = mapRef.current;
+		if (!map) return;
+		const bounds = L.latLngBounds(L.latLng(-90, -180), L.latLng(90, 180));
+		map.setMaxBounds(bounds);
+		const c = map.getCenter();
+		const clampedLat = Math.max(-90, Math.min(90, c.lat));
+		let lon = c.lng;
+		if (lon < -180 || lon > 180) {
+			lon = ((((lon + 180) % 360) + 360) % 360) - 180;
+		}
+		if (clampedLat !== c.lat || lon !== c.lng) {
+			map.setView([clampedLat, lon], map.getZoom(), { animate: false });
+		}
+	}, []);
+
 	return (
 		<div className="flex flex-col h-screen">
 			{/* Navbar */}
@@ -129,6 +148,7 @@ export default function Landing() {
 				<div className="flex items-center gap-2">
 					{/* Layer Selection Buttons */}
 					<span className="text-sm text-gray-600 mr-2">Layers:</span>
+
 
 					{/* Ocean Current Button */}
 					<button
@@ -285,10 +305,15 @@ export default function Landing() {
 				zoom={4}
 				scrollWheelZoom
 				className="flex-1 w-full"
+				renderer={L.canvas()}
+				worldCopyJump={false}
+				maxBounds={[[-90, -180], [90, 180]]}
+				maxBoundsViscosity={1.0}
 			>
 				<TileLayer
 					attribution='Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
 					url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+					noWrap
 				/>
 
 				{/* Pane must exist BEFORE the label layers mount */}
@@ -297,15 +322,17 @@ export default function Landing() {
 						pane="labels"
 						attribution="© Esri — World Boundaries & Places"
 						url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"
+						noWrap
 					/>
 					<TileLayer
 						pane="labels"
 						attribution="© Esri — Ocean Reference"
 						url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}"
+						noWrap
 					/>
 				</Pane>
 
-				<GeoJSON data={data} style={featureStyle} onEachFeature={onEach} />
+				<GeoJSON data={data as any} style={featureStyle as any} onEachFeature={onEach as any} />
 
 				{/* Ocean Current overlay - shown when velocity OR eddies is active */}
 				{velocityReady && (activeLayers.has('velocity') || activeLayers.has('eddies')) && <VelocityLayer data={velocity} />}
@@ -319,35 +346,91 @@ export default function Landing() {
 					/>
 				)}
 
-				{/* Temperature smooth overlay - Sea Surface Temperature */}
-				{activeLayers.has('temperature') && (
-					<TemperatureSmoothLayer
-						data={temperaturedata}
-						showLegend={true}
-						useCircles={true}  // Set to false for overlapping rectangles
-						legendPosition={0}  // Top position
-					/>
-				)}
+				{/* Calculate dynamic legend positions based on active layers */}
+				{(() => {
+					const visibleLayers = [];
+					let cumulativeOffset = 30; // Start from bottom with 30px margin
 
-				{/* Phytoplankton concentration overlay */}
-				{activeLayers.has('phytoplankton') && (
-					<PhytoplanktonLayer
-						data={phytoplanktondata}
-						showLegend={true}
-						useCircles={true}  // Set to false for grid rectangles
-						legendPosition={1}  // Middle position
-					/>
-				)}
+					// Check which layers are visible and calculate positions
+					if (activeLayers.has('chlorophyll')) {
+						visibleLayers.push({
+							type: 'chlorophyll',
+							bottomOffset: cumulativeOffset
+						});
+						// Use stored height or default
+						const height = legendHeights.chlorophyll || 320;
+						cumulativeOffset += height + 20; // Add spacing
+					}
 
-				{/* Chlorophyll-a concentration overlay */}
-				{activeLayers.has('chlorophyll') && (
-					<ChlorophyllLayer
-						data={chlorophylldata}
-						showLegend={true}
-						useCircles={true}  // Set to false for grid rectangles
-						legendPosition={2}  // Bottom position
-					/>
-				)}
+					if (activeLayers.has('phytoplankton')) {
+						visibleLayers.push({
+							type: 'phytoplankton',
+							bottomOffset: cumulativeOffset
+						});
+						// Use stored height or default
+						const height = legendHeights.phytoplankton || 320;
+						cumulativeOffset += height + 20; // Add spacing
+					}
+
+					if (activeLayers.has('temperature')) {
+						visibleLayers.push({
+							type: 'temperature',
+							bottomOffset: cumulativeOffset
+						});
+					}
+
+					// Create position lookup with proper typing
+					const offsets: Record<string, number> = {};
+					visibleLayers.forEach(layer => {
+						offsets[layer.type] = layer.bottomOffset;
+					});
+
+					return (
+						<>
+							{/* Temperature smooth overlay - Sea Surface Temperature */}
+							{activeLayers.has('temperature') && (
+									<TemperatureSmoothLayer
+										data={temperaturedata}
+										showLegend={true}
+										legendBottomOffset={offsets.temperature}
+										onLegendHeight={(height: number) => {
+											if (!legendHeights.temperature) {
+												setLegendHeights(prev => ({ ...prev, temperature: height }));
+											}
+										}}
+									/>
+							)}
+
+							{/* Phytoplankton concentration overlay */}
+							{activeLayers.has('phytoplankton') && (
+									<PhytoplanktonLayer
+										data={phytoplanktondata}
+										showLegend={true}
+										legendBottomOffset={offsets.phytoplankton}
+										onLegendHeight={(height: number) => {
+											if (!legendHeights.phytoplankton) {
+												setLegendHeights(prev => ({ ...prev, phytoplankton: height }));
+											}
+										}}
+									/>
+							)}
+
+							{/* Chlorophyll-a concentration overlay */}
+							{activeLayers.has('chlorophyll') && (
+									<ChlorophyllLayer
+										data={chlorophylldata}
+										showLegend={true}
+										legendBottomOffset={offsets.chlorophyll}
+										onLegendHeight={(height: number) => {
+											if (!legendHeights.chlorophyll) {
+												setLegendHeights(prev => ({ ...prev, chlorophyll: height }));
+											}
+										}}
+									/>
+							)}
+						</>
+					);
+				})()}
 
 				{/* Fly & Mark target */}
 				<FlyTo target={target} zoom={13} />

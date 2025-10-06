@@ -92,7 +92,7 @@ const VorticityLegend = ({ show }) => {
 			style={{
 				position: 'absolute',
 				bottom: '30px',
-				right: '10px',
+				left: '10px',  // Changed from right to left
 				backgroundColor: 'rgba(255, 255, 255, 0.98)',
 				padding: '14px',
 				borderRadius: '8px',

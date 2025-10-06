@@ -1,17 +1,30 @@
 // ChlorophyllLayer - Display chlorophyll-a concentration with smooth blending
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useMap } from "react-leaflet";
 import L from "leaflet";
 
 // ChlorophyllLegend component
-const ChlorophyllLegend = ({ show, metadata, position = 2 }) => {
+const ChlorophyllLegend = ({ show, metadata, position = 2, totalLegends = 1, explicitBottom, onHeight }) => {
 	if (!show) return null;
 
-	// Calculate position based on index (0=top, 1=middle, 2=bottom)
-	const bottomOffset = position === 0 ? '430px' : position === 1 ? '230px' : '30px';
+	// Calculate position dynamically based on position and total legends
+	// Each legend needs about 320px of height to accommodate all items
+	const legendRef = useRef(null);
+	const legendHeight = 320;
+	const spacing = 20;
+	const bottomOffset = explicitBottom != null
+		? `${explicitBottom}px`
+		: `${30 + (totalLegends - position - 1) * (legendHeight + spacing)}px`;
+
+	useEffect(() => {
+		if (legendRef.current && onHeight) {
+			onHeight(legendRef.current.offsetHeight);
+		}
+	}, [onHeight]);
 
 	return (
 		<div
+			ref={legendRef}
 			aria-label="Chlorophyll-a concentration legend"
 			style={{
 				position: 'absolute',
@@ -126,7 +139,14 @@ const getChlorophyllColor = (concentration) => {
 	return 'rgba(0, 255, 200, 0.8)';                                 // Bright Turquoise - Eutrophic
 };
 
-export default function ChlorophyllLayer({ data, showLegend = true, useCircles = false, legendPosition = 2 }) {
+export default function ChlorophyllLayer({
+	data,
+	showLegend = true,
+	legendPosition = 2,
+	totalLegends = 1,
+	legendBottomOffset,
+	onLegendHeight
+}) {
 	const map = useMap();
 
 	useEffect(() => {
@@ -146,57 +166,44 @@ export default function ChlorophyllLayer({ data, showLegend = true, useCircles =
 		const minVal = metadata?.min_value || Math.min(...values);
 		const maxVal = metadata?.max_value || Math.max(...values);
 
-		// Find the grid spacing from the data
+		// Determine grid spacing robustly (smallest positive delta)
 		const lats = [...new Set(chloroData.map(p => p[0]))].sort((a, b) => a - b);
 		const lons = [...new Set(chloroData.map(p => p[1]))].sort((a, b) => a - b);
 
-		// Calculate grid spacing
-		const latSpacing = lats.length > 1 ? Math.abs(lats[1] - lats[0]) : 0.2;
-		const lonSpacing = lons.length > 1 ? Math.abs(lons[1] - lons[0]) : 0.2;
+		const calcSpacing = (arr, fallback) => {
+			if (arr.length < 2) return fallback;
+			const diffs = [];
+			for (let i = 1; i < arr.length; i++) {
+				const d = Math.abs(arr[i] - arr[i-1]);
+				if (d > 0) diffs.push(d);
+			}
+			return diffs.length ? Math.min(...diffs) : fallback;
+		};
+
+		const latSpacing = calcSpacing(lats, 0.2);
+		const lonSpacing = calcSpacing(lons, 0.2);
+		const cellSize = Math.min(latSpacing, lonSpacing);
+		const overlapFactor = 1.12; // slight overlap for smoother visual blending
 
 		console.log(`Creating chlorophyll layer with ${chloroData.length} points`);
 		console.log(`Concentration range: ${minVal.toFixed(3)} to ${maxVal.toFixed(3)} ${metadata?.units || 'mg/m³'}`);
 
-		if (useCircles) {
-			// Create overlapping circles for smooth blending
-			chloroData.forEach(point => {
-				const [lat, lon, concentration] = point;
-
-				// Fixed smaller radius for better visualization
-				// Using a fixed 8km radius for all circles
-				const radiusInMeters = 8000; // 8km radius
-
-				const circle = L.circle([lat, lon], {
-					radius: radiusInMeters,
-					stroke: false,
-					fillColor: getChlorophyllColor(concentration),
-					fillOpacity: 0.5,
-					interactive: false
-				});
-
-				circle.addTo(featureGroup);
+		// Always render square-ish grid rectangles (degree-based)
+		chloroData.forEach(point => {
+			const [lat, lon, concentration] = point;
+			const half = (cellSize * overlapFactor) / 2;
+			const bounds = [
+				[lat - half, lon - half],
+				[lat + half, lon + half]
+			];
+			const rect = L.rectangle(bounds, {
+				stroke: false,
+				fillColor: getChlorophyllColor(concentration),
+				fillOpacity: 0.5,
+				interactive: false
 			});
-		} else {
-			// Create rectangles for grid visualization
-			chloroData.forEach(point => {
-				const [lat, lon, concentration] = point;
-
-				// Create rectangle bounds
-				const bounds = [
-					[lat - latSpacing/2, lon - lonSpacing/2],
-					[lat + latSpacing/2, lon + lonSpacing/2]
-				];
-
-				const rect = L.rectangle(bounds, {
-					stroke: false,
-					fillColor: getChlorophyllColor(concentration),
-					fillOpacity: 0.5,
-					interactive: false
-				});
-
-				rect.addTo(featureGroup);
-			});
-		}
+			rect.addTo(featureGroup);
+		});
 
 		// Add the feature group to the map
 		featureGroup.addTo(map);
@@ -205,7 +212,16 @@ export default function ChlorophyllLayer({ data, showLegend = true, useCircles =
 		return () => {
 			map.removeLayer(featureGroup);
 		};
-	}, [map, data, useCircles]);
+	}, [map, data]);
 
-	return <ChlorophyllLegend show={showLegend} metadata={data?.metadata} position={legendPosition} />;
+	return (
+		<ChlorophyllLegend
+			show={showLegend}
+			metadata={data?.metadata}
+			position={legendPosition}
+			totalLegends={totalLegends}
+			explicitBottom={legendBottomOffset}
+			onHeight={onLegendHeight}
+		/>
+	);
 }

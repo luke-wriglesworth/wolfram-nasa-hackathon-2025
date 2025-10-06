@@ -11,8 +11,9 @@ export default function VelocityLayer({ data, options = {} }) {
     useEffect(() => {
         if (!map || !data) return;
 
-        const layer = L.velocityLayer({
-            displayValues: true,
+        const velocityLayer = L.velocityLayer({
+            renderer: L.canvas(),
+            displayValues: false,
             displayOptions: {
                 velocityType: "Ocean Current",
                 position: "bottomleft",
@@ -20,18 +21,34 @@ export default function VelocityLayer({ data, options = {} }) {
                 angleConvention: "bearingCW",
                 speedUnit: "m/s",
             },
-            maxVelocity: 1,
-            velocityScale: 0.04,
-            particleAge: 20,
-            lineWidth: 0.75,
-            particleMultiplier: 1/10,
+            maxVelocity: 2,
+            velocityScale: 0.1,
+            particleAge: 200,
+            lineWidth: 0.9,
+            particleMultiplier: 1/20,
             data,
             ...options,
         });
+        layerRef.current = velocityLayer;
+        velocityLayer.addTo(map);
 
-        layer.addTo(map);
+        const handleMove = () => {
+            if (layerRef.current && layerRef.current._map) {
+                try {
+                    layerRef.current._clearAndRestart();
+                } catch (e) {
+                    // Swallow transient errors if layer is in teardown
+                }
+            }
+        };
+        map.on('moveend zoomend resize', handleMove);
+
         return () => {
-            map.removeLayer(layer);
+            map.off('moveend zoomend resize', handleMove);
+            if (layerRef.current) {
+                map.removeLayer(layerRef.current);
+                layerRef.current = null;
+            }
         };
     }, [map, data, options]);
 
