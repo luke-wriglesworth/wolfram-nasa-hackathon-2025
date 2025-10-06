@@ -112,7 +112,7 @@ export default function Landing() {
 			{/* Navbar */}
 			<nav className="h-14 bg-gray-900 text-white flex items-center justify-between px-6 shadow-md">
 				<span className="text-lg font-semibold tracking-wide">
-					Wolfram&nbsp;-&nbsp;SharksFromSpace
+					Wolfram&nbsp;-&nbsp; 🦈 SharksFromSpace
 				</span>
 
 				<div className="flex items-center gap-4">
