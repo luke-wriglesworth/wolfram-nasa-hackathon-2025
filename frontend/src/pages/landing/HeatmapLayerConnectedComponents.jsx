@@ -108,6 +108,23 @@ const VorticityLegend = ({ show }) => {
 				🌀 Ocean Eddy Detection
 			</div>
 
+			{/* Mesoscale eddy definition */}
+			<div
+				style={{
+					marginBottom: '12px',
+					lineHeight: '1.45',
+					background: 'linear-gradient(90deg, rgba(230,245,255,0.9), rgba(245,250,255,0.4))',
+					border: '1px solid #c7e3fa',
+					borderRadius: '5px',
+					padding: '8px 10px',
+					fontSize: '11px',
+					color: '#243447'
+				}}
+			>
+				<strong style={{ display: 'block', marginBottom: '4px' }}>What is a mesoscale eddy?</strong>
+				A rotating water mass, typically <em>10–250 km</em> across, lasting weeks to months. Eddies trap and transport heat, nutrients, and plankton, creating moving biological “hotspots.” Warm-core (anticyclonic) eddies can enhance shark foraging by giving access to deeper prey layers.
+			</div>
+
 			{/* How to use section */}
 			<div style={{
 				backgroundColor: '#f0f8ff',

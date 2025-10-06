@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from "react";
 import {
 	MapContainer,
 	TileLayer,
-	GeoJSON,
 	Marker,
 	Popup,
 	useMap,
@@ -11,13 +10,8 @@ import {
 } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import sampleData from "./sample_geojson.json";
-import type { GeoJsonObject } from "geojson";
 
-const data: GeoJsonObject = {
-	...sampleData,
-	type: "FeatureCollection"
-};
+// Removed demo GeoJSON layer and associated styling/onEach logic
 import VelocityLayer from "./VelocityLayer";
 import HeatmapLayerConnectedComponents from "./HeatmapLayerConnectedComponents";
 import TemperatureSmoothLayer from "./TemperatureSmoothLayer";
@@ -70,11 +64,6 @@ export default function Landing() {
 		color: "#3388ff",
 		fillOpacity: 0.2,
 	});
-
-	const onEach = (feature, layer) => {
-		const name = feature?.properties?.name ?? "Unnamed";
-		layer.bindPopup(name);
-	};
 
 	const parse = (v) => Number.parseFloat(String(v).trim());
 	const withinRange = (lat, lng) =>
@@ -332,7 +321,6 @@ export default function Landing() {
 					/>
 				</Pane>
 
-				<GeoJSON data={data as any} style={featureStyle as any} onEachFeature={onEach as any} />
 
 				{/* Ocean Current overlay - shown when velocity OR eddies is active */}
 				{velocityReady && (activeLayers.has('velocity') || activeLayers.has('eddies')) && <VelocityLayer data={velocity} />}
