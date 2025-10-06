@@ -16,7 +16,6 @@ concurrency:
 
 env:
   GIT_LFS_SKIP_SMUDGE: "1"
-  NODE_OPTIONS: --max_old_space_size=4096
 
 jobs:
   build:
@@ -38,6 +37,8 @@ jobs:
 
       - name: Build (Vite)
         working-directory: frontend
+        env:
+          NODE_OPTIONS: "----max-old-space-size=8192"
         run: npm run build
         # If this is a project page, use:
         # run: npm run build -- --base=/YOUR-REPO-NAME/
